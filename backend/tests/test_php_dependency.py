@@ -239,6 +239,13 @@ class PHPToolsServiceTests(unittest.TestCase):
             self.assertTrue(success)
             self.assertEqual("Composer installed", msg)
 
+    def test_tools_update_status_computation(self):
+        from dependencies.php.tools_service import php_tools_service
+        tools = php_tools_service._inspect_locally()
+        for t in tools:
+            self.assertIn("has_update", t)
+            self.assertIn("latest_version", t)
+
 
 class PHPExtensionServiceTests(unittest.TestCase):
     def test_list_extensions_validates_version(self):

@@ -21,6 +21,7 @@ TOOLS = {
         "script_name": "install_composer.sh",
         "version_cmd": ["/usr/local/bin/composer", "--version"],
         "version_regex": r"Composer\s+version\s+([0-9.]+)",
+        "latest_version": "2.10.2",
         "direct_url": "https://getcomposer.org/download/2.10.2/composer.phar",
         "sha256": "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027",
     },
@@ -32,9 +33,15 @@ TOOLS = {
         "script_name": "install_wp_cli.sh",
         "version_cmd": ["/usr/local/bin/wp", "--allow-root", "--version"],
         "version_regex": r"WP-CLI\s+([0-9.]+)",
+        "latest_version": "2.12.0",
         "direct_url": "https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar",
     },
 }
+
+
+def version_tuple(v: str | None) -> tuple[int, ...]:
+    parts = re.findall(r"\d+", str(v or ""))
+    return tuple(int(p) for p in parts) if parts else (0,)
 
 
 def find_script(script_name: str) -> Path | None:
@@ -94,6 +101,9 @@ def inspect_tool(tool_id: str) -> dict[str, Any]:
             installed = False
             version = None
 
+    latest_version = tool.get("latest_version")
+    has_update = bool(installed and version and latest_version and version_tuple(version) < version_tuple(latest_version))
+
     return {
         "id": tool_id,
         "name": tool["name"],
@@ -102,6 +112,8 @@ def inspect_tool(tool_id: str) -> dict[str, Any]:
         "installed": installed,
         "path": str(binary),
         "version": version,
+        "latest_version": latest_version,
+        "has_update": has_update,
     }
 
 

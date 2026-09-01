@@ -318,7 +318,11 @@
           </td>
           <td>
             {% if tool.installed %}
-              <span class="badge-minimal badge-minimal--active">{{ tool.version or 'Installed' }}</span>
+              {% if tool.has_update %}
+                <span class="badge-minimal badge-minimal--warning" title="Update available: v{{ tool.latest_version }}">v{{ tool.version }} ({{ _('update_available') }})</span>
+              {% else %}
+                <span class="badge-minimal badge-minimal--active">v{{ tool.version or 'Installed' }}</span>
+              {% endif %}
             {% else %}
               <span class="badge-minimal badge-minimal--neutral">{{ _('not_installed') }}</span>
             {% endif %}
@@ -326,7 +330,11 @@
           <td class="col-actions">
             <div style="display:flex; gap:8px; justify-content:flex-end;">
               {% if tool.installed %}
-                <button class="btn btn--secondary btn--sm" type="button" data-tool-action="install" data-tool-id="{{ tool.id }}">{{ _('update') }}</button>
+                {% if tool.has_update %}
+                  <button class="btn btn--secondary btn--sm" type="button" data-tool-action="install" data-tool-id="{{ tool.id }}">{{ _('update') }}</button>
+                {% else %}
+                  <button class="btn btn--ghost btn--sm" type="button" data-tool-action="install" data-tool-id="{{ tool.id }}" title="Reinstall this tool">{{ _('reinstall') }}</button>
+                {% endif %}
                 <button class="btn btn--danger btn--sm" type="button" data-tool-action="uninstall" data-tool-id="{{ tool.id }}">{{ _('uninstall') }}</button>
               {% else %}
                 <button class="btn btn--secondary btn--sm" type="button" data-tool-action="install" data-tool-id="{{ tool.id }}">{{ _('install') }}</button>

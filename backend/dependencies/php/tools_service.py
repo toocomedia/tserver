@@ -48,6 +48,7 @@ class PhpToolsService:
                 "binary": Path("/usr/local/bin/composer"),
                 "version_cmd": ["/usr/local/bin/composer", "--version"],
                 "version_re": r"Composer\s+version\s+([0-9.]+)",
+                "latest_version": "2.10.2",
             },
             {
                 "id": "wp",
@@ -57,8 +58,14 @@ class PhpToolsService:
                 "binary": Path("/usr/local/bin/wp"),
                 "version_cmd": ["/usr/local/bin/wp", "--allow-root", "--version"],
                 "version_re": r"WP-CLI\s+([0-9.]+)",
+                "latest_version": "2.12.0",
             },
         ]
+
+        def _version_tuple(v: str | None) -> tuple[int, ...]:
+            parts = re.findall(r"\d+", str(v or ""))
+            return tuple(int(p) for p in parts) if parts else (0,)
+
         results = []
         for t in tools:
             binary: Path = t["binary"]
@@ -84,6 +91,10 @@ class PhpToolsService:
                 except Exception:
                     installed = False
                     version = None
+
+            latest_version = t.get("latest_version")
+            has_update = bool(installed and version and latest_version and _version_tuple(version) < _version_tuple(latest_version))
+
             results.append({
                 "id": t["id"],
                 "name": t["name"],
@@ -92,6 +103,8 @@ class PhpToolsService:
                 "installed": installed,
                 "path": str(binary),
                 "version": version,
+                "latest_version": latest_version,
+                "has_update": has_update,
             })
         return results
 

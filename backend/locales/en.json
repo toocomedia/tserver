@@ -1006,5 +1006,7 @@
   "panel_php_tools_desc": "CLI utilities required by panel features and modern PHP frameworks.",
   "binary_path": "Binary Path",
   "not_installed": "Not Installed",
-  "no_php_installed": "No PHP version installed"
+  "no_php_installed": "No PHP version installed",
+  "reinstall": "Reinstall",
+  "update_available": "Update available"
 }

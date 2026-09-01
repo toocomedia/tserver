@@ -858,5 +858,7 @@
   "free_ram_cache": "Vider le cache RAM",
   "smart_flush_swap": "Purge intelligente du Swap",
   "free_ram_cache_tooltip": "Supprime en toute sécurité les caches de pages inactifs du noyau, libérant instantanément la RAM physique.",
-  "smart_flush_swap_tooltip": "Nettoie le cache RAM et purge en toute sécurité les anciennes allocations de swap si la mémoire le permet."
+  "smart_flush_swap_tooltip": "Nettoie le cache RAM et purge en toute sécurité les anciennes allocations de swap si la mémoire le permet.",
+  "reinstall": "Réinstaller",
+  "update_available": "Mise à jour disponible"
 }
