@@ -251,6 +251,35 @@ class TaskManagerService:
         self._active_tasks[task_id] = record
         return record
 
+    async def record_completed_task(
+        self,
+        category: str,
+        action: str,
+        target_id: str,
+        label: str,
+        success: bool = True,
+        message: str = "",
+        logs: Optional[List[str]] = None,
+    ) -> TaskRecord:
+        """Record an immediate/synchronous operation into the persistent task history."""
+        task_id = f"task_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+        now = time.time()
+        record = TaskRecord(
+            id=task_id,
+            category=category,
+            action=action,
+            target_id=target_id,
+            label=label,
+            status="succeeded" if success else "failed",
+            progress=100 if success else 0,
+            started_at=now - 0.5,
+            finished_at=now,
+            error=None if success else message,
+            logs=[f"[{time.strftime('%H:%M:%S')}] {message}"] if message else (logs or []),
+        )
+        await self._archive_task(record)
+        return record
+
     async def spawn(
         self,
         category: str,

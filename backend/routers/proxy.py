@@ -250,12 +250,28 @@ async def proxy_create_submit(
                 cache_ttl_minutes=cache_ttl_minutes,
                 cache_auto_clear_hours=cache_auto_clear_hours,
             )
+        await task_manager_service.record_completed_task(
+            category="proxy",
+            action="create",
+            target_id=proxy.full_domain,
+            label=f"Create Proxy: {proxy.full_domain}",
+            success=True,
+            message=f"Proxy {proxy.full_domain} created successfully.",
+        )
         return RedirectResponse(
             f"/proxy/?created={proxy.full_domain}",
             status_code=303,
         )
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        await task_manager_service.record_completed_task(
+            category="proxy",
+            action="create",
+            target_id=hostname or subdomain,
+            label=f"Create Proxy: {hostname or subdomain}",
+            success=False,
+            message=f"Failed to create proxy: {error_msg}",
+        )
         domains = (await db.execute(
             select(Domain).order_by(Domain.name)
         )).scalars().all()
@@ -309,9 +325,25 @@ async def proxy_delete(
 
     try:
         await proxy_service.delete_proxy(db, proxy_id)
+        await task_manager_service.record_completed_task(
+            category="proxy",
+            action="delete",
+            target_id=str(proxy_id),
+            label=f"Delete Proxy: {proxy_label}",
+            success=True,
+            message=f"Proxy {proxy_label} deleted successfully.",
+        )
         return RedirectResponse("/proxy/?deleted=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        await task_manager_service.record_completed_task(
+            category="proxy",
+            action="delete",
+            target_id=str(proxy_id),
+            label=f"Delete Proxy: {proxy_label}",
+            success=False,
+            message=f"Failed to delete proxy {proxy_label}: {error}",
+        )
         return RedirectResponse(f"/proxy/?error={error}", status_code=303)
 
 

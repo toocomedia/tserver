@@ -98,7 +98,7 @@ function initSslIssuePage() {
     });
   }
 
-  // Intercept submit, use global loader and async fetch for certbot
+  // Submit handler: opens Task Manager drawer for live progress
   let isSubmitting = false;
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -117,7 +117,6 @@ function initSslIssuePage() {
       submitBtn.disabled = true;
       submitBtn.classList.add("is-loading");
     }
-    showGlobalLoader("Issuing Certificate... (This may take 30–60s)");
     try {
       const data = Object.fromEntries(new FormData(form).entries());
       data.full_domain = opt.value;
@@ -127,9 +126,23 @@ function initSslIssuePage() {
       });
       
       await panel.post(form.action, data);
-      window.location.href = "/ssl/?issued=" + encodeURIComponent(data.full_domain || "");
+      
+      // Open Task Drawer to show real-time Certbot progress
+      if (typeof window.openTaskDrawer === 'function') {
+        window.openTaskDrawer('active');
+      }
+      if (typeof window.refreshTasks === 'function') {
+        window.refreshTasks();
+      }
+
+      if (window.toast) {
+        window.toast("SSL issuance started in background.", "success");
+      }
+
+      setTimeout(() => {
+        window.location.href = "/ssl/";
+      }, 500);
     } catch (err) {
-      hideGlobalLoader();
       isSubmitting = false;
       if (submitBtn) {
         submitBtn.disabled = false;

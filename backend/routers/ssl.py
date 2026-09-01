@@ -268,9 +268,25 @@ async def ssl_issue_submit(
         cert = await ssl_service.issue_cert(
             db, resolved_domain_id, full_domain, include_www, auto_renew
         )
+        await task_manager_service.record_completed_task(
+            category="ssl",
+            action="issue",
+            target_id=full_domain,
+            label=f"Issue SSL: {cert.full_domain}",
+            success=True,
+            message=f"SSL Certificate for {cert.full_domain} issued.",
+        )
         return RedirectResponse(f"/ssl/?issued={cert.full_domain}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        await task_manager_service.record_completed_task(
+            category="ssl",
+            action="issue",
+            target_id=full_domain,
+            label=f"Issue SSL: {full_domain}",
+            success=False,
+            message=f"Failed to issue SSL for {full_domain}: {error_msg}",
+        )
         eligible = await _build_eligible(db)
         return templates.TemplateResponse("pages/ssl/issue.html", {
             "request": request,
@@ -291,11 +307,27 @@ async def ssl_renew(cert_id: int, request: Request, db: AsyncSession = Depends(g
     is_json_request = "application/json" in content_type or request.headers.get("accept", "").startswith("application/json")
     try:
         await ssl_service.renew_cert(db, cert_id)
+        await task_manager_service.record_completed_task(
+            category="ssl",
+            action="renew",
+            target_id=str(cert_id),
+            label=f"Renew SSL: ID {cert_id}",
+            success=True,
+            message=f"SSL Certificate ID {cert_id} renewed successfully.",
+        )
         if is_json_request:
             return JSONResponse({"status": "ok"})
         return RedirectResponse(f"/ssl/?renewed=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        await task_manager_service.record_completed_task(
+            category="ssl",
+            action="renew",
+            target_id=str(cert_id),
+            label=f"Renew SSL: ID {cert_id}",
+            success=False,
+            message=f"Failed to renew SSL ID {cert_id}: {error}",
+        )
         if is_json_request:
             raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=error)
         return RedirectResponse(f"/ssl/?error={quote(error)}", status_code=303)
@@ -311,11 +343,27 @@ async def ssl_revoke(cert_id: int, request: Request, db: AsyncSession = Depends(
     is_json_request = "application/json" in content_type or request.headers.get("accept", "").startswith("application/json")
     try:
         await ssl_service.revoke_cert(db, cert_id)
+        await task_manager_service.record_completed_task(
+            category="ssl",
+            action="revoke",
+            target_id=str(cert_id),
+            label=f"Revoke SSL: ID {cert_id}",
+            success=True,
+            message=f"SSL Certificate ID {cert_id} revoked.",
+        )
         if is_json_request:
             return JSONResponse({"status": "ok"})
         return RedirectResponse("/ssl/?revoked=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        await task_manager_service.record_completed_task(
+            category="ssl",
+            action="revoke",
+            target_id=str(cert_id),
+            label=f"Revoke SSL: ID {cert_id}",
+            success=False,
+            message=f"Failed to revoke SSL ID {cert_id}: {error}",
+        )
         if is_json_request:
             raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=error)
         return RedirectResponse(f"/ssl/?error={quote(error)}", status_code=303)

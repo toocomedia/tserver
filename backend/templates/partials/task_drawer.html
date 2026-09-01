@@ -19,9 +19,6 @@
       <button type="button" class="task-drawer__tab" data-task-tab="history">
         {{ _('task_history') if _('task_history') != 'task_history' else 'Recent History' }}
       </button>
-      <button type="button" class="task-drawer__clear-btn hidden" id="task-drawer-clear-btn">
-        {{ _('clear_history') if _('clear_history') != 'clear_history' else 'Clear' }}
-      </button>
     </nav>
 
     <!-- BODY -->
@@ -30,6 +27,17 @@
         {{ _('no_active_tasks') if _('no_active_tasks') != 'no_active_tasks' else 'No tasks running right now.' }}
       </div>
     </div>
+
+    <!-- FOOTER -->
+    <footer class="task-drawer__footer hidden" id="task-drawer-footer">
+      <button type="button" class="task-drawer__clear-history-btn" id="task-drawer-clear-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        {{ _('clear_history') if _('clear_history') != 'clear_history' else 'Clear History' }}
+      </button>
+    </footer>
 
   </aside>
 </div>

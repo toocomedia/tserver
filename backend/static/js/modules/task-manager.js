@@ -50,9 +50,9 @@
     document.querySelectorAll('[data-task-tab]').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset.taskTab === activeTab);
     });
-    const clearBtn = document.getElementById('task-drawer-clear-btn');
-    if (clearBtn) {
-      clearBtn.classList.toggle('hidden', activeTab !== 'history' || historyTasksCache.length === 0);
+    const footer = document.getElementById('task-drawer-footer');
+    if (footer) {
+      footer.classList.toggle('hidden', activeTab !== 'history' || historyTasksCache.length === 0);
     }
   }
 

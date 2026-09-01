@@ -126,11 +126,28 @@
   color: var(--color-neutral-text);
 }
 
-.task-drawer__clear-btn {
-  padding: 8px 12px;
-  font-size: var(--font-small, 11px);
-  font-weight: 600;
-  background: transparent;
+/* Drawer Footer (History Controls) */
+.task-drawer__footer {
+  padding: 10px 20px 14px;
+  background: var(--color-surface);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.task-drawer__footer.hidden {
+  display: none;
+}
+
+.task-drawer__clear-history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: var(--font-small, 12px);
+  font-weight: 500;
+  background: var(--color-secondary-btn);
   color: var(--color-muted);
   border: none;
   border-radius: 6px;
@@ -138,13 +155,9 @@
   transition: all 0.15s ease;
 }
 
-.task-drawer__clear-btn:hover {
+.task-drawer__clear-history-btn:hover {
   background: var(--color-surface-hover);
   color: var(--color-danger);
-}
-
-.task-drawer__clear-btn.hidden {
-  display: none;
 }
 
 /* Content Body */

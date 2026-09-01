@@ -217,15 +217,13 @@ function revokeCert(id, domain) {
   confirmAction(
     `Revoke SSL certificate for "${domain}"? The domain will revert to HTTP only.`,
     async () => {
-      showGlobalLoader("Revoking SSL...");
       try {
         await panel.post(`/ssl/${id}/revoke`);
-        hideGlobalLoader();
         toast(`SSL for ${domain} revoked successfully.`, "success");
         const row = document.getElementById(`cert-row-${id}`);
         if (row) row.remove();
+        if (typeof window.refreshTasks === 'function') window.refreshTasks();
       } catch (err) {
-        hideGlobalLoader();
         toast(err.message || "Failed to revoke SSL.", "danger");
       }
     },
@@ -235,13 +233,11 @@ function revokeCert(id, domain) {
 
 async function renewCert(event, id, domain) {
   event.preventDefault();
-  showGlobalLoader("Renewing Certificate...");
   try {
     await panel.post(`/ssl/${id}/renew`);
-    hideGlobalLoader();
     toast(`SSL for ${domain} renewed successfully.`, "success");
+    if (typeof window.refreshTasks === 'function') window.refreshTasks();
   } catch (err) {
-    hideGlobalLoader();
     toast(err.message || "Failed to renew SSL.", "danger");
   }
 }

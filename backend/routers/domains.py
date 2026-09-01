@@ -236,11 +236,27 @@ async def domains_create(
             dns_mode=dns_mode,
             parent_domain=clean_parent,
         )
+        await task_manager_service.record_completed_task(
+            category="domain",
+            action="create",
+            target_id=name,
+            label=f"Create Domain: {name}",
+            success=True,
+            message=f"Domain {name} created successfully.",
+        )
         if ssl_enabled == "yes" and project_type != "dns":
             return RedirectResponse(f"/ssl/issue?domain_id={domain.id}&full_domain={domain.name}", status_code=303)
         return RedirectResponse(f"/domains/{domain.id}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        await task_manager_service.record_completed_task(
+            category="domain",
+            action="create",
+            target_id=name,
+            label=f"Create Domain: {name}",
+            success=False,
+            message=f"Failed to create domain {name}: {error_msg}",
+        )
         return templates.TemplateResponse("pages/domains/create.html", {
             "request": request,
             "active_page": "domains",
@@ -351,6 +367,14 @@ async def domains_delete(
         })
 
     await domain_service.delete(db, domain_id)
+    await task_manager_service.record_completed_task(
+        category="domain",
+        action="delete",
+        target_id=str(domain_id),
+        label=f"Delete Domain: {domain_name}",
+        success=True,
+        message=f"Domain {domain_name} deleted successfully.",
+    )
     return RedirectResponse("/domains/", status_code=303)
 
 
