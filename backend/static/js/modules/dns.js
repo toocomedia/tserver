@@ -147,7 +147,6 @@ window.runDnsDiagnostics = async function(domain) {
       heroTitle.textContent = "Action Required: DNS Issue Detected";
     }
     heroDesc.textContent = data.summary;
-
     // Render Steps in clean minimal rows (no bulky cards, no window overflow)
     stepsList.innerHTML = "";
     (data.steps || []).forEach((step) => {
@@ -163,6 +162,16 @@ window.runDnsDiagnostics = async function(domain) {
         ? `<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>`
         : `<path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>`;
 
+      // Clamp long technical summaries (DNSSEC sigs, glue records, etc.) to avoid text walls
+      const summary = step.summary || "";
+      const isLong = summary.length > 120;
+      const shortText = isLong ? summary.slice(0, 120).trimEnd() + "…" : summary;
+
+      const summaryHtml = isLong
+        ? `<span class="diag-s-short" style="display:block;">${shortText} <button type="button" onclick="var r=this.closest('[data-diag-row]'); r.querySelector('.diag-s-full').style.display='block'; this.parentNode.style.display='none';" style="background:none;border:none;color:var(--color-accent,#60a5fa);font-size:11px;cursor:pointer;padding:0;font-weight:600;">Show more</button></span><span class="diag-s-full" style="display:none; font-family:ui-monospace,monospace; font-size:10.5px; background:var(--color-bg); padding:6px 8px; border-radius:4px; max-height:80px; overflow-y:auto; word-break:break-all; white-space:pre-wrap; line-height:1.4; margin-top:2px; color:var(--color-muted);">${summary}</span>`
+        : shortText;
+
+      row.setAttribute("data-diag-row", "");
       row.innerHTML = `
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
           <div style="display:flex; align-items:flex-start; gap:7px; font-weight:600; font-size:13px; min-width:0; flex:1;">
@@ -171,7 +180,7 @@ window.runDnsDiagnostics = async function(domain) {
           </div>
           <span class="badge ${badgeClass}" style="font-size:9px; padding:2px 6px; flex-shrink:0; margin-top:1px;">${badgeLabel}</span>
         </div>
-        <div style="font-size:12px; color:var(--color-muted); margin-left:21px; word-break:break-word; overflow-wrap:anywhere; line-height:1.4;">${step.summary}</div>
+        <div style="font-size:12px; color:var(--color-muted); margin-left:21px; line-height:1.4;">${summaryHtml}</div>
       `;
       stepsList.appendChild(row);
     });
