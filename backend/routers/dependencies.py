@@ -50,11 +50,16 @@ async def dependency_detail(request: Request, dependency_id: str):
         raise HTTPException(status_code=404, detail="Unknown dependency.")
 
     if dependency_id == "php":
+        dependency = await asyncio.to_thread(dependency_manager.get_status, "php", force=False)
+        from dependencies.php.tools_service import php_tools_service
+        tools = await asyncio.to_thread(php_tools_service.get_tools_status)
         return templates.TemplateResponse(
             "pages/php_dependency_detail.html",
             {
                 "request": request,
                 "active_page": "dependencies",
+                "dependency": dependency,
+                "tools": tools,
             },
         )
     dependency = dependency_manager.get_status(dependency_id)

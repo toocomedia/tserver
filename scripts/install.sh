@@ -594,6 +594,8 @@ LARAVEL_HELPER_SOURCE="$PANEL_DIR/scripts/php_site_laravel_helper.py"
 LARAVEL_HELPER="/usr/local/lib/srv-panel/php-site-laravel-manager"
 FILAMENT_HELPER_SOURCE="$PANEL_DIR/scripts/php_site_filament_helper.py"
 FILAMENT_HELPER="/usr/local/lib/srv-panel/php-site-filament-manager"
+PHP_TOOLS_HELPER_SOURCE="$PANEL_DIR/scripts/php_tools_helper.py"
+PHP_TOOLS_HELPER="/usr/local/lib/srv-panel/php-tools-manager"
 COMPOSER_INSTALL_SH="$PANEL_DIR/scripts/install_composer.sh"
 
 if [[ ! -f "$PHP_RUNTIME_HELPER_SOURCE" ]]; then
@@ -616,6 +618,9 @@ install -m 700 "$PHP_RUNTIME_HELPER_SOURCE" "$PHP_RUNTIME_HELPER"
 install -m 700 "$PHP_SITE_HELPER_SOURCE" "$PHP_SITE_HELPER"
 install -m 700 "$LARAVEL_HELPER_SOURCE" "$LARAVEL_HELPER"
 install -m 700 "$FILAMENT_HELPER_SOURCE" "$FILAMENT_HELPER"
+if [[ -f "$PHP_TOOLS_HELPER_SOURCE" ]]; then
+  install -m 700 "$PHP_TOOLS_HELPER_SOURCE" "$PHP_TOOLS_HELPER"
+fi
 if ! bash "$PANEL_DIR/scripts/install_wp_cli.sh"; then
   warn "WP-CLI installation failed — native WordPress creation will remain unavailable"
 fi

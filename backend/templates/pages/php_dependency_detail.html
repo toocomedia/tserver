@@ -9,28 +9,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="php-dependency-page">
+<div class="php-dependency-page" style="position:relative;">
   <!-- TOP LEVEL TAB STRIP -->
   <div class="tabs-nav mb-lg" role="tablist" data-php-top-tabs>
     <button class="tabs-nav__btn btn--ghost is-active" type="button" role="tab" data-php-tab-btn="versions" id="top-tab-versions">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="M4 5h16v14H4z"></path><path d="M8 9h8M8 13h5"></path></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"></path><path d="M8 9h8M8 13h5"></path></svg>
       {{ _('php_versions') }}
     </button>
     <button class="tabs-nav__btn btn--ghost" type="button" role="tab" data-php-tab-btn="extensions" id="top-tab-extensions">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
       {{ _('php_extensions') }}
     </button>
     <button class="tabs-nav__btn btn--ghost" type="button" role="tab" data-php-tab-btn="tools" id="top-tab-tools">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="m14.7 6.3 3 3L8.5 18.5 5 19l.5-3.5L14.7 6.3z"></path></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.7 6.3 3 3L8.5 18.5 5 19l.5-3.5L14.7 6.3z"></path></svg>
       {{ _('panel_tools') }}
     </button>
   </div>
 
-  <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('php-runtime-skeleton', header=1, sections=[1], tables=[{'rows': 7}]) }}
-  <!-- END SKELETON OVERLAY -->
-  <article class="info-subpage-wrap" data-php-runtime data-runtime-url="/api/dependencies/php/runtime-view" style="min-height:560px;">
-    <div data-php-runtime-content data-async-load aria-live="polite"></div>
+  <article class="info-subpage-wrap" data-php-runtime data-runtime-url="/api/dependencies/php/runtime-view" style="position:relative; min-height:560px;">
+    {% if not dependency %}
+      {{ skeleton_overlay('php-runtime-skeleton', header=1, sections=[1], tables=[{'rows': 7}]) }}
+    {% endif %}
+    <div data-php-runtime-content aria-live="polite">
+      {% if dependency %}
+        {% include "pages/partials/php_dependency_runtime.html" %}
+      {% endif %}
+    </div>
   </article>
 </div>
 {% endblock %}
@@ -141,7 +145,7 @@
     content.querySelectorAll('[data-php-tab-panel]').forEach(function (panel) {
       panel.hidden = panel.getAttribute('data-php-tab-panel') !== activeTab;
     });
-    if (activeTab === 'extensions') {
+    if (activeTab === 'extensions' && !loadedExtensions.length) {
       loadExtensions();
     }
   }
@@ -163,7 +167,11 @@
     var select = content.querySelector('[data-ext-version-select]');
     var loading = content.querySelector('[data-ext-loading]');
     var tableWrap = content.querySelector('[data-ext-table-wrap]');
-    if (!select || !select.value) return;
+    if (!select || !select.value) {
+      if (loading) loading.hidden = true;
+      if (tableWrap) tableWrap.hidden = false;
+      return;
+    }
 
     var version = select.value;
     if (loading) loading.hidden = false;
@@ -233,12 +241,18 @@
     var select = content.querySelector('[data-ext-version-select]');
     if (select && select.dataset.bound !== 'true') {
       select.dataset.bound = 'true';
-      select.addEventListener('change', loadExtensions);
+      select.addEventListener('change', function () {
+        loadedExtensions = [];
+        loadExtensions();
+      });
     }
     var refreshBtn = content.querySelector('[data-ext-refresh]');
     if (refreshBtn && refreshBtn.dataset.bound !== 'true') {
       refreshBtn.dataset.bound = 'true';
-      refreshBtn.addEventListener('click', loadExtensions);
+      refreshBtn.addEventListener('click', function () {
+        loadedExtensions = [];
+        loadExtensions();
+      });
     }
     var searchInput = content.querySelector('[data-ext-search]');
     if (searchInput && searchInput.dataset.bound !== 'true') {
@@ -258,7 +272,6 @@
       }
     });
 
-    // Delegate install / uninstall buttons
     if (content.dataset.extActionBound !== 'true') {
       content.dataset.extActionBound = 'true';
       content.addEventListener('click', async function (e) {
@@ -334,27 +347,24 @@
     try {
       var response = await fetch(root.dataset.runtimeUrl, {headers: {'Accept': 'text/html'}});
       if (!response.ok) throw new Error('Could not load the PHP runtime status.');
-      content.innerHTML = await response.text();
-      if (typeof window.initLazyImageSkeletons === 'function') window.initLazyImageSkeletons();
-      content.classList.add('skeleton-content--enter');
-      window.requestAnimationFrame(function () {
-        content.classList.remove('skeleton-content--enter');
-      });
+      var html = await response.text();
+      if (html.includes('<!DOCTYPE') || html.includes('<html')) {
+        throw new Error('Invalid partial response received from server.');
+      }
+      content.innerHTML = html;
       bindActions();
       setActionsDisabled(operationPending);
       var operationState = content.querySelector('[data-php-operation-active]');
       if (operationState && operationState.dataset.phpOperationActive === 'true') {
         runtimeRefreshTimer = window.setTimeout(loadRuntime, 2000);
       }
-      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton');
     } catch (error) {
-      content.innerHTML = '<p class="text-danger">Could not load the PHP runtime status. Refresh the page to try again.</p>';
-      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton');
+      showError(error.message);
       if (window.toast) window.toast(error.message, 'error');
     }
   }
 
-  loadRuntime();
+  bindActions();
 })();
 </script>
 {% endblock %}

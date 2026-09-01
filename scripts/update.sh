@@ -263,6 +263,8 @@ LARAVEL_HELPER_SOURCE="$PANEL_DIR/scripts/php_site_laravel_helper.py"
 LARAVEL_HELPER="/usr/local/lib/srv-panel/php-site-laravel-manager"
 FILAMENT_HELPER_SOURCE="$PANEL_DIR/scripts/php_site_filament_helper.py"
 FILAMENT_HELPER="/usr/local/lib/srv-panel/php-site-filament-manager"
+PHP_TOOLS_HELPER_SOURCE="$PANEL_DIR/scripts/php_tools_helper.py"
+PHP_TOOLS_HELPER="/usr/local/lib/srv-panel/php-tools-manager"
 COMPOSER_INSTALL_SH="$PANEL_DIR/scripts/install_composer.sh"
 
 if [[ -f "$PHP_RUNTIME_HELPER_SOURCE" ]]; then
@@ -288,6 +290,10 @@ if [[ -f "$FILAMENT_HELPER_SOURCE" ]]; then
   install -m 700 "$FILAMENT_HELPER_SOURCE" "$FILAMENT_HELPER"
 else
   warn "Filament site helper is missing from this panel release"
+fi
+if [[ -f "$PHP_TOOLS_HELPER_SOURCE" ]]; then
+  install -d -m 755 /usr/local/lib/srv-panel
+  install -m 700 "$PHP_TOOLS_HELPER_SOURCE" "$PHP_TOOLS_HELPER"
 fi
 if ! command -v setfacl >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive apt-get install -y acl || warn "acl package install failed — PHP site creation will remain unavailable"

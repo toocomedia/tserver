@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import threading
 from pathlib import Path
@@ -14,10 +15,21 @@ import config
 class PhpToolsService:
     """Manages CLI tools required by panel PHP features."""
 
-    HELPER_PATH = Path(__file__).resolve().parents[3] / "scripts" / "php_tools_helper.py"
+    CANDIDATE_HELPERS = (
+        Path("/usr/local/lib/srv-panel/php-tools-manager"),
+        Path(__file__).resolve().parents[2] / "scripts" / "php_tools_helper.py",
+        Path(__file__).resolve().parents[3] / "scripts" / "php_tools_helper.py",
+        Path("/opt/srv-panel/scripts/php_tools_helper.py"),
+    )
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
+
+    def _get_helper_path(self) -> Path | None:
+        for path in self.CANDIDATE_HELPERS:
+            if path.is_file():
+                return path
+        return None
 
     @staticmethod
     def _command_prefix() -> list[str]:
@@ -25,41 +37,75 @@ class PhpToolsService:
             return []
         return ["sudo", "-n"] if config.PRIVILEGED_SUDO else []
 
+    @staticmethod
+    def _inspect_locally() -> list[dict[str, Any]]:
+        tools = [
+            {
+                "id": "composer",
+                "name": "Composer",
+                "description": "Dependency manager for modern PHP applications, Laravel, and Filament",
+                "category": "Package Management",
+                "binary": Path("/usr/local/bin/composer"),
+                "version_cmd": ["/usr/local/bin/composer", "--version"],
+                "version_re": r"Composer\s+version\s+([0-9.]+)",
+            },
+            {
+                "id": "wp",
+                "name": "WP-CLI",
+                "description": "Command-line interface for WordPress management and automation",
+                "category": "WordPress CLI",
+                "binary": Path("/usr/local/bin/wp"),
+                "version_cmd": ["/usr/local/bin/wp", "--allow-root", "--version"],
+                "version_re": r"WP-CLI\s+([0-9.]+)",
+            },
+        ]
+        results = []
+        for t in tools:
+            binary: Path = t["binary"]
+            installed = binary.is_file() and not binary.is_symlink() and os.access(binary, os.X_OK)
+            version = None
+            if installed:
+                try:
+                    res = subprocess.run(
+                        t["version_cmd"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        check=False,
+                    )
+                    out = (res.stdout or res.stderr or "").strip()
+                    m = re.search(t["version_re"], out)
+                    version = m.group(1) if m else (out.split("\n")[0] if out else "Installed")
+                except Exception:
+                    version = "Installed"
+            results.append({
+                "id": t["id"],
+                "name": t["name"],
+                "description": t["description"],
+                "category": t["category"],
+                "installed": installed,
+                "path": str(binary),
+                "version": version,
+            })
+        return results
+
     def _call(self, operation: str, **kwargs: Any) -> dict[str, Any]:
         if os.name == "nt":
-            # Mock / stub response on non-Linux development environments
             if operation == "list_tools":
-                return {
-                    "tools": [
-                        {
-                            "id": "composer",
-                            "name": "Composer",
-                            "description": "Dependency manager for modern PHP applications, Laravel, and Filament",
-                            "category": "Package Management",
-                            "installed": False,
-                            "path": "/usr/local/bin/composer",
-                            "version": None,
-                        },
-                        {
-                            "id": "wp",
-                            "name": "WP-CLI",
-                            "description": "Command-line interface for WordPress management and automation",
-                            "category": "WordPress CLI",
-                            "installed": False,
-                            "path": "/usr/local/bin/wp",
-                            "version": None,
-                        },
-                    ]
-                }
+                return {"tools": self._inspect_locally()}
             return {"message": f"{operation} simulated on Windows.", "tool": {"installed": True}}
 
-        if not self.HELPER_PATH.is_file():
-            raise RuntimeError("PHP tools helper script is missing.")
+        helper = self._get_helper_path()
+        if not helper:
+            if operation == "list_tools":
+                return {"tools": self._inspect_locally()}
+            raise RuntimeError("PHP tools helper script is missing. Run the SRV Panel updater first.")
 
         request = json.dumps({"operation": operation, **kwargs})
         try:
+            cmd = [*self._command_prefix(), "python3", str(helper)] if helper.suffix == ".py" else [*self._command_prefix(), str(helper)]
             res = subprocess.run(
-                [*self._command_prefix(), "python3", str(self.HELPER_PATH)],
+                cmd,
                 input=request,
                 capture_output=True,
                 text=True,
@@ -84,8 +130,11 @@ class PhpToolsService:
 
     def get_tools_status(self) -> list[dict[str, Any]]:
         with self._lock:
-            payload = self._call("list_tools")
-            return list(payload.get("tools", []))
+            try:
+                payload = self._call("list_tools")
+                return list(payload.get("tools", []))
+            except Exception:
+                return self._inspect_locally()
 
     def install_tool(self, tool_id: str) -> tuple[bool, str, dict[str, Any]]:
         with self._lock:
