@@ -295,6 +295,12 @@ if [[ -f "$PHP_TOOLS_HELPER_SOURCE" ]]; then
   install -d -m 755 /usr/local/lib/srv-panel
   install -m 700 "$PHP_TOOLS_HELPER_SOURCE" "$PHP_TOOLS_HELPER"
 fi
+if [[ -f "$PANEL_DIR/scripts/install_composer.sh" ]]; then
+  install -m 755 "$PANEL_DIR/scripts/install_composer.sh" /usr/local/lib/srv-panel/install_composer.sh
+fi
+if [[ -f "$PANEL_DIR/scripts/install_wp_cli.sh" ]]; then
+  install -m 755 "$PANEL_DIR/scripts/install_wp_cli.sh" /usr/local/lib/srv-panel/install_wp_cli.sh
+fi
 if ! command -v setfacl >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive apt-get install -y acl || warn "acl package install failed — PHP site creation will remain unavailable"
 fi

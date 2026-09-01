@@ -621,6 +621,12 @@ install -m 700 "$FILAMENT_HELPER_SOURCE" "$FILAMENT_HELPER"
 if [[ -f "$PHP_TOOLS_HELPER_SOURCE" ]]; then
   install -m 700 "$PHP_TOOLS_HELPER_SOURCE" "$PHP_TOOLS_HELPER"
 fi
+if [[ -f "$PANEL_DIR/scripts/install_composer.sh" ]]; then
+  install -m 755 "$PANEL_DIR/scripts/install_composer.sh" /usr/local/lib/srv-panel/install_composer.sh
+fi
+if [[ -f "$PANEL_DIR/scripts/install_wp_cli.sh" ]]; then
+  install -m 755 "$PANEL_DIR/scripts/install_wp_cli.sh" /usr/local/lib/srv-panel/install_wp_cli.sh
+fi
 if ! bash "$PANEL_DIR/scripts/install_wp_cli.sh"; then
   warn "WP-CLI installation failed — native WordPress creation will remain unavailable"
 fi

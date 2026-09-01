@@ -12,28 +12,43 @@ from pathlib import Path
 from typing import Any
 
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
-
 TOOLS = {
     "composer": {
         "name": "Composer",
         "binary": Path("/usr/local/bin/composer"),
         "description": "Dependency manager for modern PHP applications, Laravel, and Filament",
         "category": "Package Management",
-        "install_script": SCRIPTS_DIR / "install_composer.sh",
+        "script_name": "install_composer.sh",
         "version_cmd": ["/usr/local/bin/composer", "--version"],
         "version_regex": r"Composer\s+version\s+([0-9.]+)",
+        "direct_url": "https://getcomposer.org/download/2.10.2/composer.phar",
+        "sha256": "5ee7125f8a30a34d246cefdc0bc85b8a783b28f2aec968994118512350d28027",
     },
     "wp": {
         "name": "WP-CLI",
         "binary": Path("/usr/local/bin/wp"),
         "description": "Command-line interface for WordPress management and automation",
         "category": "WordPress CLI",
-        "install_script": SCRIPTS_DIR / "install_wp_cli.sh",
+        "script_name": "install_wp_cli.sh",
         "version_cmd": ["/usr/local/bin/wp", "--allow-root", "--version"],
         "version_regex": r"WP-CLI\s+([0-9.]+)",
+        "direct_url": "https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar",
     },
 }
+
+
+def find_script(script_name: str) -> Path | None:
+    candidates = (
+        Path(__file__).resolve().parent / script_name,
+        Path("/usr/local/lib/srv-panel") / script_name,
+        Path("/opt/srv-panel/scripts") / script_name,
+        Path("/srv-panel/scripts") / script_name,
+        Path(__file__).resolve().parents[1] / "scripts" / script_name,
+    )
+    for c in candidates:
+        if c.is_file():
+            return c
+    return None
 
 
 def fail(message: str) -> None:
@@ -99,10 +114,35 @@ def install_tool(data: dict[str, Any]) -> dict[str, Any]:
     tool = TOOLS.get(tool_id)
     if not tool:
         fail(f"Unknown tool: {tool_id}")
-    script: Path = tool["install_script"]
-    if not script.is_file():
-        fail(f"Installer script not found: {script.name}")
-    run(["bash", str(script)], timeout=300)
+
+    script_path = find_script(tool.get("script_name", ""))
+    if script_path:
+        run(["bash", str(script_path)], timeout=300)
+    else:
+        url = tool.get("direct_url")
+        binary = tool["binary"]
+        if not url:
+            fail(f"Installer not available for tool: {tool['name']}")
+        print(f"==> Downloading {tool['name']} directly...", file=sys.stderr)
+        tmp_target = f"/tmp/{tool_id}.phar"
+        run(["curl", "-fL", "--retry", "3", "--connect-timeout", "15", url, "-o", tmp_target], timeout=120)
+        sha256 = tool.get("sha256")
+        if sha256:
+            import hashlib
+            with open(tmp_target, "rb") as f:
+                actual = hashlib.sha256(f.read()).hexdigest()
+            if actual != sha256:
+                try:
+                    os.unlink(tmp_target)
+                except OSError:
+                    pass
+                fail(f"{tool['name']} checksum verification failed.")
+        run(["install", "-m", "0755", tmp_target, str(binary)], timeout=30)
+        try:
+            os.unlink(tmp_target)
+        except OSError:
+            pass
+
     info = inspect_tool(tool_id)
     if not info["installed"]:
         fail(f"Tool {tool['name']} installation failed verification.")
