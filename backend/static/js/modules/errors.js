@@ -3,12 +3,15 @@
  * Copy report to clipboard, clear-all confirm, delete confirm.
  */
 
-document.addEventListener("app:init", () => {
+function initErrorsModule() {
   initCopyButtons();
   initClearAll();
   initDelete();
   dismissAlerts();
-});
+}
+
+document.addEventListener("app:init", initErrorsModule);
+document.addEventListener("DOMContentLoaded", initErrorsModule);
 
 async function copyText(text) {
   if (navigator.clipboard && window.isSecureContext) {
@@ -64,7 +67,6 @@ function initClearAll() {
         } else {
           toast("Refresh the page (Ctrl+F5) and try again.", "danger");
         }
-        }
       },
       { danger: true, title: "Clear All Errors", okLabel: "Clear Errors", itemName: "All Errors" }
     );
@@ -76,13 +78,17 @@ function initDelete() {
   if (!btn) return;
   btn.addEventListener("click", () => {
     const id = btn.getAttribute("data-error-id");
-    confirmAction(`Delete error #${id}?`, async () => {
-      if (typeof window.submitPost === "function") {
-        window.submitPost(`/admin/errors/${id}/delete`);
-      } else {
-        toast("Refresh the page (Ctrl+F5) and try again.", "danger");
-      }
-    }, { danger: true, title: "Delete Error", okLabel: "Delete", itemName: `Error #${id}` });
+    confirmAction(
+      `Delete error #${id}?`,
+      async () => {
+        if (typeof window.submitPost === "function") {
+          window.submitPost(`/admin/errors/${id}/delete`);
+        } else {
+          toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+        }
+      },
+      { danger: true, title: "Delete Error", okLabel: "Delete", itemName: `Error #${id}` }
+    );
   });
 }
 

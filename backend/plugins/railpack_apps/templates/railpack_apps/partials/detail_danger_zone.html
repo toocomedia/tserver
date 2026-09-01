@@ -9,7 +9,7 @@
     {% elif deployment_active %}
       <p class="text-muted" style="font-size: 13px;">Stop the active deployment before deleting this app.</p>
     {% else %}
-      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">
+      <button class="btn btn--danger btn--sm" type="button" data-delete-drawer-trigger data-delete-url="/plugins/railpack_apps/{{ app.id }}/uninstall" data-delete-title="Delete Application" data-delete-message="Remove application and all associated resources. Everything local is deleted by default." data-delete-item="{{ app.container_name }}" data-delete-label="{{ 'Retry delete all' if app.status == 'delete_failed' else 'Delete all' }}" data-delete-extra-id="railpack-app-delete-extra" style="width: 100%;">
         {{ 'Retry delete all' if app.status == 'delete_failed' else 'Delete all' }}
       </button>
     {% endif %}
@@ -17,59 +17,34 @@
 </div>
 
 {% if app.status != 'deleting' %}
-<!-- DELETE CONFIRMATION MODAL -->
-<div class="modal-backdrop hidden" data-app-delete-modal role="dialog" aria-modal="true" aria-labelledby="app-delete-title">
-  <div class="modal">
-    <div class="modal__header">
-      <h2 id="app-delete-title">Delete Application</h2>
-      <button class="btn btn--ghost btn--icon" type="button" data-app-delete-close aria-label="Close">×</button>
-    </div>
-    <form class="form" method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">
-      <div class="modal__body">
-        <p style="font-size: 14px; margin-bottom: 16px;">Everything local is deleted by default. Check only what you want to keep.</p>
-        
-        {% if databases or app.data_volume or app.storage_mounts or backups %}
-        <div class="form-group mb-md">
-          <label class="form-label" style="margin-bottom: 8px;">Keep instead</label>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            {% for item in databases %}
-              {% if item.provider in ['docker', 'panel_postgres', 'panel_mariadb'] %}
-                <label class="form-check">
-                  <input type="checkbox" name="keep_database_ids" value="{{ item.id }}">
-                  <span>Keep {{ item.kind | title }} service and data</span>
-                </label>
-              {% else %}
-                <p class="form-hint" style="margin-top: 0;">{{ item.kind | title }} ({{ item.provider }}) is external and is always kept.</p>
-              {% endif %}
-            {% endfor %}
-            {% if app.data_volume or app.storage_mounts %}
-              <label class="form-check">
-                <input type="checkbox" name="keep_app_volume" value="true">
-                <span>Keep persistent storage volumes</span>
-              </label>
-            {% endif %}
-            {% if backups %}
-              <label class="form-check">
-                <input type="checkbox" name="keep_saved_backups" value="true">
-                <span>Keep {{ backups | length }} local backup{{ '' if backups | length == 1 else 's' }}</span>
-              </label>
-            {% endif %}
-          </div>
-        </div>
-        {% endif %}
-        
-        <div class="form-group">
-          <label class="form-label" for="confirmation">Confirm deletion</label>
-          <p class="form-hint">Type DELETE ALL to continue.</p>
-          <input class="form-input" id="confirmation" name="confirmation" required>
-        </div>
-        {% include "partials/csrf_field.html" %}
-      </div>
-      <div class="modal__footer">
-        <button class="btn btn--secondary" type="button" data-app-delete-close>Cancel</button>
-        <button class="btn btn--danger" type="submit">Delete all</button>
-      </div>
-    </form>
+<template id="railpack-app-delete-extra">
+  <input type="hidden" name="confirmation" value="DELETE ALL">
+  {% if databases or app.data_volume or app.storage_mounts or backups %}
+  <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-weight: 600; font-size: 12px; color: var(--color-text); margin-bottom: 2px;">Keep local data:</div>
+    {% for item in databases %}
+      {% if item.provider in ['docker', 'panel_postgres', 'panel_mariadb'] %}
+        <label class="form-check" style="font-size: 12.5px;">
+          <input type="checkbox" name="keep_database_ids" value="{{ item.id }}">
+          <span>Keep {{ item.kind | title }} service and data</span>
+        </label>
+      {% else %}
+        <p class="form-hint" style="margin: 0; font-size: 11.5px;">{{ item.kind | title }} ({{ item.provider }}) is external and is always kept.</p>
+      {% endif %}
+    {% endfor %}
+    {% if app.data_volume or app.storage_mounts %}
+      <label class="form-check" style="font-size: 12.5px;">
+        <input type="checkbox" name="keep_app_volume" value="true">
+        <span>Keep persistent storage volumes</span>
+      </label>
+    {% endif %}
+    {% if backups %}
+      <label class="form-check" style="font-size: 12.5px;">
+        <input type="checkbox" name="keep_saved_backups" value="true">
+        <span>Keep {{ backups | length }} local backup{{ '' if backups | length == 1 else 's' }}</span>
+      </label>
+    {% endif %}
   </div>
-</div>
+  {% endif %}
+</template>
 {% endif %}

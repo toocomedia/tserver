@@ -132,17 +132,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (bulkBtn) {
-    bulkBtn.addEventListener('click', async () => {
+    bulkBtn.addEventListener('click', () => {
       const action = bulkSelect.value;
       const selectedIds = Array.from(itemCheckboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
       
       if (!action || selectedIds.length === 0) return;
 
-      const confirmMsg = action === 'delete' 
+      const isDelete = action === 'delete';
+      const confirmMsg = isDelete
         ? `Are you sure you want to permanently delete ${selectedIds.length} app(s) and all their associated data?`
         : `Are you sure you want to ${action} ${selectedIds.length} app(s)?`;
         
-      if (confirm(confirmMsg)) {
+      const executeBulkAction = async () => {
         bulkBtn.disabled = true;
         bulkBtn.textContent = 'Working...';
         
@@ -159,15 +160,40 @@ document.addEventListener('DOMContentLoaded', () => {
           if (res.ok) {
             window.location.reload();
           } else {
-            alert('Failed to execute bulk action.');
+            const errData = await res.json().catch(() => ({}));
+            const msg = errData.detail || 'Failed to execute bulk action.';
+            if (typeof window.toast === 'function') {
+              window.toast(msg, 'danger');
+            } else {
+              alert(msg);
+            }
             bulkBtn.disabled = false;
             bulkBtn.textContent = 'Apply';
           }
         } catch (err) {
-          alert(err.message);
+          if (typeof window.toast === 'function') {
+            window.toast(err.message || 'Operation failed', 'danger');
+          } else {
+            alert(err.message);
+          }
           bulkBtn.disabled = false;
           bulkBtn.textContent = 'Apply';
         }
+      };
+
+      if (typeof window.confirmAction === 'function') {
+        window.confirmAction(
+          confirmMsg,
+          executeBulkAction,
+          {
+            danger: isDelete,
+            title: isDelete ? 'Bulk Delete Apps' : `Bulk ${action.charAt(0).toUpperCase() + action.slice(1)} Apps`,
+            okLabel: isDelete ? `Delete ${selectedIds.length} Apps` : 'Apply',
+            itemName: `${selectedIds.length} Selected Apps`
+          }
+        );
+      } else if (confirm(confirmMsg)) {
+        executeBulkAction();
       }
     });
   }

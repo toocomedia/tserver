@@ -1,17 +1,19 @@
 /**
- * delete-drawer.js — Shared Side Split Delete Drawer
+ * delete-drawer.js — Shared Bottom Delete Window Component
  * Features:
- * - Slide-in split drawer with dark opacity backdrop
- * - 5-second countdown timer before confirm button activates
- * - Programmatic API (window.openDeleteDrawer) & declarative triggers
- * - Translatable strings & RTL support
+ * - Slide-up bottom dock with dark translucent backdrop
+ * - Hover-hold activation timer with visual progress fill (no countdown digits)
+ * - Touch press-and-hold fallback for mobile devices
+ * - Programmatic API (window.openDeleteDrawer) & declarative data-delete-drawer-trigger
  */
 
 (function () {
   'use strict';
 
-  let countdownInterval = null;
+  let hoverTimer = null;
+  let hoverStartTime = null;
   let currentConfirmCallback = null;
+  const HOVER_DURATION_MS = 1200; // 1.2 seconds hover to unlock
 
   const getBackdrop = () => document.getElementById('delete-drawer-backdrop');
   const getDrawer = () => document.getElementById('delete-drawer');
@@ -21,64 +23,79 @@
   const getItemNameEl = () => document.querySelector('[data-delete-drawer-item]');
   const getExtraEl = () => document.querySelector('[data-delete-drawer-extra]');
   const getConfirmBtn = () => document.getElementById('delete-drawer-confirm-btn');
+  const getProgressEl = () => document.querySelector('[data-delete-drawer-progress]');
 
-  function clearCountdown() {
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
+  function resetHoverState(btn) {
+    if (hoverTimer) {
+      cancelAnimationFrame(hoverTimer);
+      hoverTimer = null;
+    }
+    hoverStartTime = null;
+
+    if (!btn) btn = getConfirmBtn();
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.classList.remove('is-hovering', 'is-unlocked');
+
+    const progressEl = getProgressEl();
+    if (progressEl) {
+      progressEl.style.width = '0%';
     }
   }
 
-  function resetConfirmButton(btn) {
-    if (!btn) return;
-    clearCountdown();
-    btn.disabled = true;
-    const baseLabel = btn.getAttribute('data-base-label') || 'Delete';
-    const textEl = btn.querySelector('[data-delete-drawer-btn-text]');
-    if (textEl) {
-      textEl.textContent = `${baseLabel} (5s)`;
+  function startHoverProgress(btn, onUnlocked) {
+    if (!btn || btn.classList.contains('is-unlocked')) return;
+
+    if (hoverTimer) {
+      cancelAnimationFrame(hoverTimer);
     }
-  }
 
-  function startCountdown(btn, duration = 5, baseLabel = 'Delete', countdownTpl = 'Delete ({sec}s)') {
-    if (!btn) return;
-    clearCountdown();
+    btn.classList.add('is-hovering');
+    const progressEl = getProgressEl();
+    hoverStartTime = performance.now();
 
-    let remaining = duration;
-    btn.disabled = true;
+    function step(timestamp) {
+      const elapsed = timestamp - hoverStartTime;
+      const pct = Math.min(100, (elapsed / HOVER_DURATION_MS) * 100);
 
-    const textEl = btn.querySelector('[data-delete-drawer-btn-text]');
-    const updateLabel = (sec) => {
-      if (textEl) {
-        if (countdownTpl && countdownTpl.includes('{sec}')) {
-          textEl.textContent = countdownTpl.replace('{sec}', sec);
-        } else {
-          textEl.textContent = `${baseLabel} (${sec}s)`;
-        }
+      if (progressEl) {
+        progressEl.style.width = `${pct}%`;
       }
-    };
 
-    updateLabel(remaining);
-
-    countdownInterval = setInterval(() => {
-      remaining -= 1;
-      if (remaining > 0) {
-        updateLabel(remaining);
-      } else {
-        clearCountdown();
+      if (elapsed >= HOVER_DURATION_MS) {
+        // Unlocked!
         btn.disabled = false;
-        if (textEl) {
-          textEl.textContent = baseLabel;
+        btn.classList.remove('is-hovering');
+        btn.classList.add('is-unlocked');
+        if (progressEl) progressEl.style.width = '100%';
+        hoverTimer = null;
+        if (typeof onUnlocked === 'function') onUnlocked();
+        if (navigator.vibrate) {
+          try { navigator.vibrate(35); } catch (_) {}
         }
+      } else {
+        hoverTimer = requestAnimationFrame(step);
       }
-    }, 1000);
+    }
+
+    hoverTimer = requestAnimationFrame(step);
+  }
+
+  function stopHoverProgress(btn) {
+    if (!btn) btn = getConfirmBtn();
+    if (!btn) return;
+
+    if (!btn.classList.contains('is-unlocked')) {
+      resetHoverState(btn);
+    }
   }
 
   function closeDeleteDrawer() {
     const backdrop = getBackdrop();
     if (!backdrop) return;
     backdrop.classList.add('hidden');
-    clearCountdown();
+    resetHoverState();
     currentConfirmCallback = null;
   }
 
@@ -130,14 +147,26 @@
       }
     }
 
-    const duration = typeof options.countdown === 'number' ? options.countdown : 5;
     const baseLabel = options.okLabel || confirmBtn.getAttribute('data-base-label') || 'Delete';
-    const countdownTpl = confirmBtn.getAttribute('data-countdown-tpl') || 'Delete ({sec}s)';
+    const textEl = confirmBtn.querySelector('[data-delete-drawer-btn-text]');
+    if (textEl) {
+      textEl.textContent = baseLabel;
+    }
 
     // Reset button listeners via clone
     const freshBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(freshBtn, confirmBtn);
     confirmBtn = freshBtn;
+
+    // Reset button hover states
+    resetHoverState(confirmBtn);
+
+    // Bind Hover / Touch events for progress unlocking
+    confirmBtn.addEventListener('mouseenter', () => startHoverProgress(confirmBtn));
+    confirmBtn.addEventListener('mouseleave', () => stopHoverProgress(confirmBtn));
+    confirmBtn.addEventListener('touchstart', () => startHoverProgress(confirmBtn), { passive: true });
+    confirmBtn.addEventListener('touchend', () => stopHoverProgress(confirmBtn), { passive: true });
+    confirmBtn.addEventListener('touchcancel', () => stopHoverProgress(confirmBtn), { passive: true });
 
     // Show drawer
     backdrop.classList.remove('hidden');
@@ -147,15 +176,12 @@
       lucide.createIcons({ root: drawer || backdrop });
     }
 
-    // Start 5s countdown
-    startCountdown(confirmBtn, duration, baseLabel, countdownTpl);
-
     // Save action callback
     currentConfirmCallback = async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      if (confirmBtn.disabled) return;
+      if (!confirmBtn.classList.contains('is-unlocked') && confirmBtn.disabled) return;
 
       closeDeleteDrawer();
 
@@ -202,7 +228,7 @@
       }
     };
 
-    confirmBtn.addEventListener('click', currentConfirmCallback, { once: true });
+    confirmBtn.addEventListener('click', currentConfirmCallback);
   }
 
   // Global listeners (Close buttons, backdrop click, Escape key)
@@ -217,7 +243,7 @@
       });
     }
 
-    // Close buttons
+    // Close buttons & Declarative triggers
     document.addEventListener('click', (e) => {
       const closeBtn = e.target.closest('[data-delete-drawer-close]');
       if (closeBtn) {

@@ -291,6 +291,30 @@
 {% block scripts %}
 <script>
 function openDeleteModal(pubkey, peerName) {
+  if (typeof window.confirmAction === 'function') {
+    window.confirmAction(
+      `Remove ${peerName} from WireGuard? This revokes access and removes configuration permanently.`,
+      async () => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/plugins/wireguard/api/peers/delete';
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrf_token';
+        csrf.value = document.querySelector('[name="csrf_token"]')?.value || '';
+        const pk = document.createElement('input');
+        pk.type = 'hidden';
+        pk.name = 'pubkey';
+        pk.value = pubkey;
+        form.appendChild(csrf);
+        form.appendChild(pk);
+        document.body.appendChild(form);
+        form.submit();
+      },
+      { danger: true, title: 'Delete Peer', okLabel: 'Delete Peer', itemName: peerName }
+    );
+    return;
+  }
   document.getElementById('delete-peer-name-label').textContent = peerName;
   document.getElementById('delete-peer-pubkey').value = pubkey;
   openModal('delete-peer-modal');
