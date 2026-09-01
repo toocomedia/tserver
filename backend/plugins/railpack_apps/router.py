@@ -353,9 +353,7 @@ async def uninstall(
     db: AsyncSession = Depends(get_db),
 ):
     app = await _app(db, app_id)
-    domain = await db.get(Domain, app.domain_id)
-    if domain is None:
-        raise HTTPException(409, "App domain is missing.")
+    domain = await db.get(Domain, app.domain_id) if app.domain_id else None
     attachments = await container_app_database_service.attachments_for(db, app.id)
     managed_ids = {item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
     if set(keep_database_ids) - managed_ids:

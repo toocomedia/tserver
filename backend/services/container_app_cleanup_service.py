@@ -18,7 +18,7 @@ from services import container_app_service, nginx_service
 from services.apps_engine.runtime_dispatch import is_compose_app
 
 
-async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain, *, remove_network: bool = True) -> None:
+async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain | None = None, *, remove_network: bool = True) -> None:
     errors: list[str] = []
     await _step(errors, "remove app container", lambda: _remove_container(app))
     has_docker_databases = bool(await db.scalar(select(ContainerAppDatabase.id).where(
@@ -26,7 +26,8 @@ async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain, *, remo
     )))
     if remove_network and not has_docker_databases:
         await _step(errors, "remove private app network", lambda: _remove_network(app))
-    await _step(errors, "restore domain site", lambda: _restore_domain_site(db, domain))
+    if domain is not None:
+        await _step(errors, "restore domain site", lambda: _restore_domain_site(db, domain))
     await _step(errors, "remove build files", lambda: asyncio.to_thread(_remove_path, container_app_service.root(app.id)))
     env_p = Path(app.env_path) if app.env_path else container_app_service.env_path(app.id)
     await _step(errors, "remove environment file", lambda: asyncio.to_thread(_remove_path, env_p))
