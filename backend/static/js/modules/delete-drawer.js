@@ -189,21 +189,32 @@
             document.dispatchEvent(new CustomEvent(options.deleteEvent, {
               detail: { payload, triggerItem: options.itemName, deleteUrl: options.deleteUrl }
             }));
-          } else if (typeof window.submitPost === 'function') {
-            window.submitPost(options.deleteUrl, payload);
           } else {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = options.deleteUrl;
-            Object.entries(payload).forEach(([k, v]) => {
-              const hidden = document.createElement('input');
-              hidden.type = 'hidden';
-              hidden.name = k;
-              hidden.value = v;
-              form.appendChild(hidden);
+            const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+            const res = await fetch(options.deleteUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+              },
+              body: new URLSearchParams({ ...payload, csrf_token: csrfToken }),
             });
-            document.body.appendChild(form);
-            form.submit();
+            if (res.ok) {
+              if (options.rowEl) {
+                options.rowEl.remove();
+              } else if (options.targetSelector) {
+                const target = document.querySelector(options.targetSelector);
+                if (target) target.remove();
+              }
+              if (typeof window.refreshTasks === 'function') window.refreshTasks();
+              if (typeof window.toast === 'function') {
+                window.toast(options.itemName ? `${options.itemName} deleted.` : 'Deleted successfully.', 'success');
+              }
+            } else {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.detail || data.error || 'Delete request failed');
+            }
           }
         }
       } catch (err) {

@@ -127,6 +127,11 @@ function initSslIssuePage() {
       
       await panel.post(form.action, data);
       
+      // Close drawer modal if open
+      if (typeof closeModal === 'function') {
+        closeModal('issue-ssl-drawer-modal');
+      }
+
       // Open Task Drawer to show real-time Certbot progress
       if (typeof window.openTaskDrawer === 'function') {
         window.openTaskDrawer('active');
@@ -139,9 +144,18 @@ function initSslIssuePage() {
         window.toast("SSL issuance started in background.", "success");
       }
 
-      setTimeout(() => {
-        window.location.href = "/ssl/";
-      }, 500);
+      isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("is-loading");
+      }
+
+      // If on standalone /ssl/issue page, navigate to list; if on /ssl/ index drawer, stay live without reload!
+      if (window.location.pathname.startsWith('/ssl/issue')) {
+        setTimeout(() => {
+          window.location.href = "/ssl/";
+        }, 400);
+      }
     } catch (err) {
       isSubmitting = false;
       if (submitBtn) {

@@ -244,12 +244,11 @@ function initDeleteButtons() {
               }
               const row = btn.closest("tr, .card, .table-row, [data-proxy-row]");
               if (row) {
-                row.style.transition = "opacity 0.3s ease";
+                row.style.transition = "opacity 0.25s ease";
                 row.style.opacity = "0";
-                setTimeout(() => row.remove(), 300);
-              } else {
-                window.location.reload();
+                setTimeout(() => row.remove(), 250);
               }
+              if (typeof window.refreshTasks === "function") window.refreshTasks();
             } else {
               const errorMsg = data.error || "Failed to delete reverse proxy.";
               if (typeof toast === "function") {

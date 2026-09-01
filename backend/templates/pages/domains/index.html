@@ -190,13 +190,31 @@ function filterDomainsTable() {
 function deleteDomain(id, name) {
   confirmAction(`Delete domain "${name}"? This will remove the DNS zone, Nginx config, webroot, and linked SSL certificate.`, async () => {
     try {
-      if (typeof window.submitPost === 'function') {
-        window.submitPost(`/domains/${id}/delete`);
-        return;
+      const csrfToken = typeof getCsrfToken === "function" ? getCsrfToken() : "";
+      const response = await fetch(`/domains/${id}/delete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json",
+        },
+        body: new URLSearchParams({ csrf_token: csrfToken }),
+      });
+      const data = await response.json();
+      if (response.ok && (data.success || data.status === 'running')) {
+        toast(`Domain "${name}" deleted successfully.`, 'success');
+        const row = document.querySelector(`tr[data-domain-id="${id}"]`);
+        if (row) {
+          row.style.transition = "opacity 0.25s ease";
+          row.style.opacity = "0";
+          setTimeout(() => row.remove(), 250);
+        }
+        if (typeof window.refreshTasks === 'function') window.refreshTasks();
+      } else {
+        toast(data.error || data.message || 'Failed to delete domain', 'danger');
       }
-      toast('Refresh the page (Ctrl+F5) and try again.', 'danger');
     } catch (e) {
-      toast(e.message, 'danger');
+      toast(e.message || 'Network error while deleting domain', 'danger');
     }
   }, { danger: true, title: 'Delete Domain', itemName: name, okLabel: 'Delete Domain' });
 }
