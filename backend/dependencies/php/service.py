@@ -153,6 +153,28 @@ class PHPDependencyService:
         _, _, package_version = result.stdout.strip().partition("\t")
         return package_version or None
 
+    def _installed_versions(self) -> set[str]:
+        """Return version numbers for all actually installed php*-fpm packages."""
+        if os.name == "nt":
+            return set()
+        try:
+            result = self._run(
+                ["dpkg-query", "-W", "-f=${db:Status-Abbrev}\t${Package}\n", "php*-fpm"],
+                timeout=6,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return set()
+        if result.returncode != 0:
+            return set()
+        installed: set[str] = set()
+        for line in result.stdout.splitlines():
+            parts = line.strip().split("\t")
+            if len(parts) >= 2 and parts[0].startswith("ii"):
+                match = PACKAGE_RE.fullmatch(parts[1])
+                if match:
+                    installed.add(match.group(1))
+        return installed
+
     def _managed_versions(self) -> set[str]:
         if os.name == "nt" or not self.HELPER_PATH.is_file():
             return set()
@@ -200,16 +222,10 @@ class PHPDependencyService:
 
     def _probe(self) -> dict[str, Any]:
         available = self._available_versions()
-        configured = (
-            {
-                path.name for path in Path("/etc/php").iterdir()
-                if path.is_dir() and self._valid_version(path.name)
-            }
-            if os.name != "nt" and Path("/etc/php").is_dir() else set()
-        )
+        installed_fpm = self._installed_versions()
         managed = self._managed_versions()
         versions = sorted(
-            set(available) | configured | set(managed),
+            set(available) | installed_fpm | set(managed),
             key=lambda value: tuple(int(part) for part in value.split(".")),
         )
         runtime_versions = [

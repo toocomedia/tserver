@@ -128,7 +128,7 @@ class RoundcubePhpService:
     # PHP runtime discovery
     # ---------------------------------------------------------------
     def php_version(self) -> str | None:
-        """Highest panel-managed PHP version, else highest installed directory."""
+        """Highest panel-managed PHP version, else highest installed version."""
         try:
             data = json.loads(PHP_STATE_PATH.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
@@ -136,15 +136,23 @@ class RoundcubePhpService:
         versions = [
             str(version)
             for version in data
-            if isinstance(version, str) and re.fullmatch(r"\d+\.\d+", version)
+            if isinstance(version, str) and re.fullmatch(r"^\d+\.\d+$", version)
         ]
-        if not versions:
-            fpm_dir = Path("/etc/php")
-            if fpm_dir.is_dir():
-                versions = sorted(
-                    (entry.name for entry in fpm_dir.iterdir() if entry.is_dir()),
-                    key=_VERSION_KEY,
+        if not versions and os.name != "nt":
+            try:
+                res = self._run(
+                    ["dpkg-query", "-W", "-f=${db:Status-Abbrev}\t${Package}\n", "php*-fpm"],
+                    timeout=6,
                 )
+                if res.returncode == 0:
+                    for line in res.stdout.splitlines():
+                        parts = line.strip().split("\t")
+                        if len(parts) >= 2 and parts[0].startswith("ii"):
+                            m = re.fullmatch(r"^php(\d+\.\d+)-fpm$", parts[1])
+                            if m:
+                                versions.append(m.group(1))
+            except Exception:
+                pass
         if not versions:
             return None
         return sorted(versions, key=_VERSION_KEY)[-1]
