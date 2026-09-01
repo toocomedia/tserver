@@ -210,8 +210,14 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertIn("/api/dependencies/php/enable-external-repository", router)
         self.assertIn("/api/dependencies/php/toggle", router)
         self.assertIn("/api/dependencies/php/runtime-view", router)
-        self.assertIn("PHP_RUNTIME_HELPER", install_script)
-        self.assertIn("PHP_RUNTIME_HELPER", update_script)
+        self.assertIn("install_pecl_extension", helper)
+        self.assertIn("uninstall_pecl_extension", helper)
+        self.assertIn("packages.sury.org/php", helper)
+        self.assertIn("PPA_SUPPORTED_DEBIAN_CODENAMES", helper)
+        self.assertIn("data-custom-pecl-submit", runtime_template)
+        self.assertIn("getCsrfToken()", page_template)
+        self.assertIn("X-CSRF-Token", page_template)
+        self.assertIn("/api/dependencies/php/versions/{version}/extensions/{extension}/install-pecl", router)
 
 
 class PHPToolsServiceTests(unittest.TestCase):
@@ -252,6 +258,19 @@ class PHPExtensionServiceTests(unittest.TestCase):
             self.assertEqual(1, len(res["results"]))
             self.assertEqual("swoole", res["results"][0]["name"])
 
+    def test_pecl_extension_install_and_uninstall(self):
+        from dependencies.php.extension_service import php_extension_service
+        with patch.object(php_extension_service, "_call", return_value={"message": "PECL extension yaml compiled"}):
+            success, msg = php_extension_service.install_pecl_extension("8.3", "yaml")
+            self.assertTrue(success)
+            self.assertIn("yaml", msg)
+
+        with patch.object(php_extension_service, "_call", return_value={"message": "PECL extension yaml uninstalled"}):
+            success, msg = php_extension_service.uninstall_pecl_extension("8.3", "yaml")
+            self.assertTrue(success)
+            self.assertIn("yaml", msg)
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -67,11 +67,17 @@ def inspect_tool(tool_id: str) -> dict[str, Any]:
                 timeout=10,
                 check=False,
             )
-            out = res.stdout or res.stderr
-            match = re.search(tool["version_regex"], out)
-            version = match.group(1) if match else out.strip().split("\n")[0]
+            if res.returncode == 0:
+                out = (res.stdout or res.stderr or "").strip()
+                match = re.search(tool["version_regex"], out)
+                version = match.group(1) if match else (out.split("\n")[0] if out else None)
+                installed = bool(version)
+            else:
+                installed = False
+                version = None
         except Exception:
-            version = "Installed (version unknown)"
+            installed = False
+            version = None
 
     return {
         "id": tool_id,

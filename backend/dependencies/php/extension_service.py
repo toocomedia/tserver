@@ -122,5 +122,30 @@ class PhpExtensionService:
             except Exception as exc:
                 return False, str(exc)
 
+    def install_pecl_extension(self, version: str, extension: str) -> tuple[bool, str]:
+        normalized = self._valid_version(version)
+        if not normalized:
+            return False, f"Invalid PHP version: {version}"
+        clean_ext = str(extension or "").strip().lower()
+        with self._lock:
+            try:
+                payload = self._call("install_pecl_extension", version=normalized, extension=clean_ext)
+                return True, str(payload.get("message") or f"PECL extension {clean_ext} installed successfully.")
+            except Exception as exc:
+                return False, str(exc)
+
+    def uninstall_pecl_extension(self, version: str, extension: str) -> tuple[bool, str]:
+        normalized = self._valid_version(version)
+        if not normalized:
+            return False, f"Invalid PHP version: {version}"
+        clean_ext = str(extension or "").strip().lower()
+        with self._lock:
+            try:
+                payload = self._call("uninstall_pecl_extension", version=normalized, extension=clean_ext)
+                return True, str(payload.get("message") or f"PECL extension {clean_ext} uninstalled successfully.")
+            except Exception as exc:
+                return False, str(exc)
+
 
 php_extension_service = PhpExtensionService()
+

@@ -56,6 +56,12 @@
   var PAGE_CHUNK = 12;
   var actionSelector = '[data-php-install], [data-php-uninstall], [data-php-check], [data-php-external-repository], [data-php-toggle]';
 
+  function getCsrfToken() {
+    var input = document.querySelector('input[name="csrf_token"]') || document.querySelector('meta[name="csrf-token"]');
+    return input ? (input.value || input.getAttribute('content') || '') : '';
+  }
+
+
   function setActionsDisabled(disabled) {
     content.querySelectorAll(actionSelector).forEach(function (form) {
       var button = form.querySelector('button');
@@ -81,7 +87,11 @@
     operationPending = true;
     setActionsDisabled(true);
     try {
-      var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
+      var response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {'Accept': 'application/json', 'X-CSRF-Token': getCsrfToken()}
+      });
       var payload = await response.json().catch(function () { return {}; });
       if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
       if (window.toast) window.toast(payload.message, 'success');
@@ -394,7 +404,10 @@
 
         try {
           var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(extName) + '/install';
-          var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          var res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+          });
           var payload = await res.json().catch(function () { return {}; });
           if (!res.ok || !payload.success) throw new Error(payload.detail || 'Failed to install ' + extName);
           if (window.toast) window.toast(payload.message || ('Extension ' + extName + ' installed successfully.'), 'success');
@@ -407,6 +420,52 @@
         } finally {
           submitBtn.disabled = false;
           submitBtn.textContent = origText;
+        }
+      });
+    }
+
+    // PECL Custom Extension Compile Form submit
+    var customPeclBtn = content.querySelector('[data-custom-pecl-submit]');
+    if (customPeclBtn && customPeclBtn.dataset.bound !== 'true') {
+      customPeclBtn.dataset.bound = 'true';
+      customPeclBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        var nameInput = content.querySelector('[data-custom-ext-input]');
+        var extName = (nameInput ? nameInput.value : '').toLowerCase().trim().replace(/^php\d*\.?\d*-?/, '');
+        var verSelect = content.querySelector('[data-ext-version-select]');
+        var ver = verSelect ? verSelect.value : '';
+
+        if (!extName) {
+          if (window.toast) window.toast('Please enter a valid extension name to compile with PECL.', 'warning');
+          return;
+        }
+        if (!ver) {
+          if (window.toast) window.toast('No installed PHP version selected.', 'warning');
+          return;
+        }
+
+        customPeclBtn.disabled = true;
+        var origText = customPeclBtn.textContent;
+        customPeclBtn.textContent = 'Compiling PECL...';
+
+        try {
+          var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(extName) + '/install-pecl';
+          var res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+          });
+          var payload = await res.json().catch(function () { return {}; });
+          if (!res.ok || !payload.success) throw new Error(payload.detail || 'Failed to compile PECL extension ' + extName);
+          if (window.toast) window.toast(payload.message || ('PECL extension ' + extName + ' compiled successfully.'), 'success');
+          if (nameInput) nameInput.value = '';
+          var resultsWrap = content.querySelector('[data-custom-ext-results]');
+          if (resultsWrap) resultsWrap.style.display = 'none';
+          await loadExtensions();
+        } catch (err) {
+          if (window.toast) window.toast(err.message, 'error');
+        } finally {
+          customPeclBtn.disabled = false;
+          customPeclBtn.textContent = origText;
         }
       });
     }
@@ -427,7 +486,10 @@
 
         try {
           var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(name) + '/' + action;
-          var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          var res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+          });
           var payload = await res.json().catch(function () { return {}; });
           if (!res.ok || !payload.success) throw new Error(payload.detail || 'Extension operation failed.');
           if (window.toast) window.toast(payload.message || ('Extension ' + name + ' updated.'), 'success');
@@ -457,7 +519,10 @@
 
         try {
           var url = '/api/dependencies/php/tools/' + encodeURIComponent(toolId) + '/' + action;
-          var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          var res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+          });
           var payload = await res.json().catch(function () { return {}; });
           if (!res.ok || !payload.success) throw new Error(payload.detail || 'Tool operation failed.');
           if (window.toast) window.toast(payload.message || ('Tool ' + toolId + ' updated.'), 'success');

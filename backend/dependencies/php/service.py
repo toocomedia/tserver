@@ -21,11 +21,12 @@ PACKAGE_RE = re.compile(r"^php(\d+\.\d+)-fpm$")
 # Always show the common PHP lines so an administrator can immediately see
 # whether their configured APT sources offer the version an older script needs.
 KNOWN_VERSION_SERIES = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5")
-EXTERNAL_REPOSITORY_NAME = "Ondřej Surý PHP PPA"
+EXTERNAL_REPOSITORY_NAME = "Ondřej Surý PHP Repository"
 EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
     "ppa.launchpadcontent.net/ondrej/php",
     "ppa.launchpad.net/ondrej/php",
+    "packages.sury.org/php",
 )
 
 

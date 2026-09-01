@@ -626,3 +626,43 @@ async def php_uninstall_extension(
     if not success:
         return JSONResponse({"success": False, "detail": message}, status_code=409)
     return {"success": True, "message": message}
+
+
+@router.post("/api/dependencies/php/versions/{version}/extensions/{extension}/install-pecl")
+async def php_install_pecl_extension(
+    version: str,
+    extension: str,
+    db: AsyncSession = Depends(get_db),
+):
+    from dependencies.php.extension_service import php_extension_service
+    from services.resource_guard_service import resource_guard_service
+    preflight = await resource_guard_service.preflight(db, "native_heavy")
+    if not preflight["ok"]:
+        return JSONResponse(
+            {"success": False, "detail": f"Resource Guard blocked PECL compilation: {preflight['reason']}"},
+            status_code=409,
+        )
+    token = resource_guard_service.register(
+        "dependency", f"php_pecl_{version}_{extension}", "normal",
+        f"Compile PHP {version} PECL extension {extension}", profile="native_heavy"
+    )
+    try:
+        success, message = await asyncio.to_thread(php_extension_service.install_pecl_extension, version, extension)
+    finally:
+        resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {"success": True, "message": message}
+
+
+@router.post("/api/dependencies/php/versions/{version}/extensions/{extension}/uninstall-pecl")
+async def php_uninstall_pecl_extension(
+    version: str,
+    extension: str,
+):
+    from dependencies.php.extension_service import php_extension_service
+    success, message = await asyncio.to_thread(php_extension_service.uninstall_pecl_extension, version, extension)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {"success": True, "message": message}
+

@@ -73,11 +73,17 @@ class PhpToolsService:
                         timeout=10,
                         check=False,
                     )
-                    out = (res.stdout or res.stderr or "").strip()
-                    m = re.search(t["version_re"], out)
-                    version = m.group(1) if m else (out.split("\n")[0] if out else "Installed")
+                    if res.returncode == 0:
+                        out = (res.stdout or res.stderr or "").strip()
+                        m = re.search(t["version_re"], out)
+                        version = m.group(1) if m else (out.split("\n")[0] if out else None)
+                        installed = bool(version)
+                    else:
+                        installed = False
+                        version = None
                 except Exception:
-                    version = "Installed"
+                    installed = False
+                    version = None
             results.append({
                 "id": t["id"],
                 "name": t["name"],

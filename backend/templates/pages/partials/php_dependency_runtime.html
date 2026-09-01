@@ -217,10 +217,14 @@
 
   <!-- EXPANDABLE CUSTOM EXTENSION SEARCH & INSTALLER SECTION -->
   <div class="mb-md" data-custom-ext-section hidden style="padding-bottom:8px;">
-    <form data-custom-ext-form class="d-flex align-center gap-xs" style="margin:0;">
-      <input type="text" class="form-input" data-custom-ext-input placeholder="Search or enter extension name (e.g. swoole, xdebug, apcu, grpc, yaml)..." style="height:34px; font-size:13px; flex:1;">
-      <button class="btn btn--secondary btn--sm" type="submit" data-custom-ext-submit style="height:34px; white-space:nowrap;">{{ _('install') }}</button>
+    <form data-custom-ext-form class="d-flex align-center gap-xs" style="margin:0; flex-wrap:wrap;">
+      <input type="text" class="form-input" data-custom-ext-input placeholder="Search or enter extension name (e.g. swoole, xdebug, apcu, grpc, yaml, vips)..." style="height:34px; font-size:13px; flex:1; min-width:260px;">
+      <button class="btn btn--secondary btn--sm" type="submit" data-custom-ext-submit style="height:34px; white-space:nowrap;" title="Install pre-compiled binary via APT">{{ _('install') }} (APT)</button>
+      <button class="btn btn--secondary btn--sm" type="button" data-custom-pecl-submit style="height:34px; white-space:nowrap;" title="Compile extension source via PECL (requires build tools)">Compile (PECL)</button>
     </form>
+    <div class="text-small text-muted" style="margin-top:4px; font-size:11.5px;">
+      Tip: Use <strong>APT</strong> for fast pre-compiled packages (recommended). Use <strong>PECL</strong> only if the extension is unavailable in APT repositories.
+    </div>
     <div data-custom-ext-results style="margin-top:6px; display:none;">
       <div class="table-wrap" style="max-height:220px; overflow-y:auto;">
         <table class="table" style="font-size:12.5px;">

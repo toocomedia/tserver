@@ -81,8 +81,11 @@ EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
     "ppa.launchpadcontent.net/ondrej/php",
     "ppa.launchpad.net/ondrej/php",
+    "packages.sury.org/php",
 )
 PPA_SUPPORTED_UBUNTU_CODENAMES = frozenset({"jammy", "noble"})
+PPA_SUPPORTED_DEBIAN_CODENAMES = frozenset({"bullseye", "bookworm", "trixie", "sid"})
+
 
 
 def fail(message: str) -> None:
@@ -290,21 +293,32 @@ def refresh_apt() -> None:
     run(["apt-get", "update", "-qq"], timeout=300)
 
 
-def require_supported_ppa_platform() -> None:
+def require_supported_ppa_platform() -> tuple[str, str]:
     values = os_release()
-    if values.get("ID", "").lower() != "ubuntu":
-        fail("The external PHP repository action is supported only on Ubuntu. On Debian, use PHP versions available from configured APT sources.")
+    os_id = values.get("ID", "").lower()
     codename = (
         values.get("UBUNTU_CODENAME")
         or values.get("VERSION_CODENAME")
         or "unknown"
     ).lower()
-    if codename not in PPA_SUPPORTED_UBUNTU_CODENAMES:
-        fail(
-            f"The external PHP PPA does not publish packages for Ubuntu "
-            f"{values.get('VERSION_ID', 'unknown')} ({codename}). Use PHP versions "
-            "available from Ubuntu's configured APT sources."
-        )
+    if os_id == "ubuntu":
+        if codename not in PPA_SUPPORTED_UBUNTU_CODENAMES:
+            fail(
+                f"The external PHP PPA does not publish packages for Ubuntu "
+                f"{values.get('VERSION_ID', 'unknown')} ({codename}). Use PHP versions "
+                "available from Ubuntu's configured APT sources."
+            )
+        return os_id, codename
+    elif os_id == "debian":
+        if codename not in PPA_SUPPORTED_DEBIAN_CODENAMES:
+            fail(
+                f"The external PHP repository does not publish packages for Debian "
+                f"{values.get('VERSION_ID', 'unknown')} ({codename}). Use PHP versions "
+                "available from Debian's configured APT sources."
+            )
+        return os_id, codename
+    fail("The external PHP repository action is supported on Ubuntu and Debian. Use PHP versions available from configured APT sources.")
+    return os_id, codename
 
 
 def verify_fpm(item_version: str) -> None:
@@ -400,21 +414,30 @@ def check_available(_: dict[str, Any]) -> dict[str, Any]:
 
 
 def enable_external_repository(_: dict[str, Any]) -> dict[str, Any]:
-    """Enable the one reviewed PHP PPA; repository URLs are never user input."""
-    require_supported_ppa_platform()
+    """Enable the one reviewed PHP repository (Sury); repository URLs are never user input."""
+    os_id, codename = require_supported_ppa_platform()
     if external_repository_configured():
         refresh_apt()
         return {"message": "The external PHP repository is already enabled; package availability was refreshed."}
-    add_repository = shutil.which("add-apt-repository")
-    if not add_repository:
-        print("==> Installing Ubuntu repository management support...", file=sys.stderr)
-        refresh_apt()
-        run(["apt-get", "install", "-y", "software-properties-common"], timeout=300)
+    if os_id == "ubuntu":
         add_repository = shutil.which("add-apt-repository")
-    if not add_repository:
-        fail("Ubuntu repository management support could not be installed.")
-    print("==> Enabling the external PHP repository...", file=sys.stderr)
-    run([add_repository, "--yes", EXTERNAL_REPOSITORY_PPA], timeout=300)
+        if not add_repository:
+            print("==> Installing Ubuntu repository management support...", file=sys.stderr)
+            refresh_apt()
+            run(["apt-get", "install", "-y", "software-properties-common"], timeout=300)
+            add_repository = shutil.which("add-apt-repository")
+        if not add_repository:
+            fail("Ubuntu repository management support could not be installed.")
+        print("==> Enabling the external PHP repository...", file=sys.stderr)
+        run([add_repository, "--yes", EXTERNAL_REPOSITORY_PPA], timeout=300)
+    elif os_id == "debian":
+        print("==> Enabling the Sury PHP repository for Debian...", file=sys.stderr)
+        run(["apt-get", "install", "-y", "ca-certificates", "curl", "lsb-release", "gnupg"], timeout=300)
+        key_path = Path("/etc/apt/trusted.gpg.d/php.gpg")
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        run(["curl", "-sSLo", str(key_path), "https://packages.sury.org/php/apt.gpg"], timeout=60)
+        sources_path = Path("/etc/apt/sources.list.d/php.list")
+        sources_path.write_text(f"deb https://packages.sury.org/php/ {codename} main\n", encoding="utf-8")
     if not external_repository_configured():
         fail("The external PHP repository could not be verified after it was added.")
     refresh_apt()
@@ -603,6 +626,85 @@ def search_available_extensions(data: dict[str, Any]) -> dict[str, Any]:
     return {"version": item_version, "results": results[:30]}
 
 
+def install_pecl_extension(data: dict[str, Any]) -> dict[str, Any]:
+    item_version = version(data.get("version"))
+    ext_name = str(data.get("extension") or "").strip().lower()
+    if not re.fullmatch(r"^[a-z0-9_]+$", ext_name):
+        fail(f"Invalid PHP extension name format: {ext_name}")
+
+    dev_pkg = f"php{item_version}-dev"
+    build_deps = [dev_pkg, "gcc", "make", "autoconf", "pkg-config", "php-pear"]
+    needed = [p for p in build_deps if not package_installed(p)]
+    if needed:
+        refresh_apt()
+        for p in needed:
+            apt_candidate(p)
+        print(f"==> Installing build toolchain for PECL compilation: {' '.join(needed)}...", file=sys.stderr)
+        run(["apt-get", "install", "-y", "--no-install-recommends", *needed], timeout=900)
+
+    pecl_bin = shutil.which("pecl")
+    if not pecl_bin:
+        fail("PECL command is unavailable after installing php-pear.")
+
+    print(f"==> Compiling {ext_name} for PHP {item_version} via PECL...", file=sys.stderr)
+    cmd = f"printf '\\n' | pecl -d php_suffix={item_version} install {ext_name}"
+    run(["/bin/bash", "-c", cmd], timeout=900)
+
+    mods_dir = Path(f"/etc/php/{item_version}/mods-available")
+    mods_dir.mkdir(parents=True, exist_ok=True)
+    ini_file = mods_dir / f"{ext_name}.ini"
+    if not ini_file.is_file():
+        ini_file.write_text(f"; configuration for php {ext_name} module\n; priority=20\nextension={ext_name}.so\n", encoding="utf-8")
+
+    if shutil.which("phpenmod"):
+        run(["phpenmod", "-v", item_version, ext_name], timeout=60)
+
+    run(["systemctl", "reload-or-restart", f"php{item_version}-fpm"], timeout=90)
+    verify_fpm(item_version)
+    return {
+        "version": item_version,
+        "extension": ext_name,
+        "mode": "pecl",
+        "message": f"PECL extension {ext_name} for PHP {item_version} compiled and enabled successfully.",
+    }
+
+
+def uninstall_pecl_extension(data: dict[str, Any]) -> dict[str, Any]:
+    item_version = version(data.get("version"))
+    ext_name = str(data.get("extension") or "").strip().lower()
+    if not re.fullmatch(r"^[a-z0-9_]+$", ext_name):
+        fail(f"Invalid PHP extension name format: {ext_name}")
+
+    if shutil.which("phpdismod"):
+        try:
+            run(["phpdismod", "-v", item_version, ext_name], timeout=60)
+        except Exception:
+            pass
+
+    ini_file = Path(f"/etc/php/{item_version}/mods-available/{ext_name}.ini")
+    if ini_file.is_file():
+        try:
+            ini_file.unlink()
+        except OSError:
+            pass
+
+    pecl_bin = shutil.which("pecl")
+    if pecl_bin:
+        try:
+            run([pecl_bin, "-d", f"php_suffix={item_version}", "uninstall", ext_name], timeout=300)
+        except Exception:
+            pass
+
+    run(["systemctl", "reload-or-restart", f"php{item_version}-fpm"], timeout=90)
+    verify_fpm(item_version)
+    return {
+        "version": item_version,
+        "extension": ext_name,
+        "mode": "pecl",
+        "message": f"PECL extension {ext_name} for PHP {item_version} uninstalled successfully.",
+    }
+
+
 def list_managed(_: dict[str, Any]) -> dict[str, Any]:
     return {"versions": sorted(load_state(), key=lambda value: tuple(int(part) for part in value.split(".")))}
 
@@ -616,6 +718,8 @@ OPERATIONS = {
     "search_available_extensions": search_available_extensions,
     "install_extension": install_extension,
     "uninstall_extension": uninstall_extension,
+    "install_pecl_extension": install_pecl_extension,
+    "uninstall_pecl_extension": uninstall_pecl_extension,
     "set_all_enabled": set_all_enabled,
     "uninstall_version": uninstall_version,
     "list_managed": list_managed,
@@ -628,6 +732,8 @@ MUTATING_OPERATIONS = frozenset({
     "install_site_extensions",
     "install_extension",
     "uninstall_extension",
+    "install_pecl_extension",
+    "uninstall_pecl_extension",
     "set_all_enabled",
     "uninstall_version",
 })
