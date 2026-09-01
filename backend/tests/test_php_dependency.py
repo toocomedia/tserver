@@ -245,12 +245,12 @@ class PHPExtensionServiceTests(unittest.TestCase):
         self.assertIn("mysql", ext_names)
         self.assertIn("redis", ext_names)
 
-    def test_install_and_uninstall_extension(self):
+    def test_search_extensions(self):
         from dependencies.php.extension_service import php_extension_service
-        with patch.object(php_extension_service, "_call", return_value={"message": "redis installed"}):
-            success, msg = php_extension_service.install_extension("8.3", "redis")
-            self.assertTrue(success)
-            self.assertEqual("redis installed", msg)
+        with patch.object(php_extension_service, "_call", return_value={"version": "8.3", "results": [{"name": "swoole", "package": "php8.3-swoole"}]}):
+            res = php_extension_service.search_extensions("8.3", "swoole")
+            self.assertEqual(1, len(res["results"]))
+            self.assertEqual("swoole", res["results"][0]["name"])
 
 
 if __name__ == "__main__":

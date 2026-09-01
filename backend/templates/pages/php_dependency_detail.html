@@ -48,6 +48,7 @@
   var content = root.querySelector('[data-php-runtime-content]');
   var operationPending = false;
   var runtimeRefreshTimer = null;
+  var customExtSearchTimer = null;
   var activeTab = 'versions';
   var loadedExtensions = [];
   var currentCategory = 'all';
@@ -213,7 +214,7 @@
     });
 
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">No matching extensions found. Use the "Install Any Extension" bar above to install it.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">No matching extensions found. Use the "+ Install Any Extension" button above to install any package.</td></tr>';
       if (loadMoreWrap) loadMoreWrap.style.display = 'none';
       return;
     }
@@ -247,6 +248,46 @@
         '<td class="col-actions"><div style="display:flex; justify-content:flex-end;">' + actionBtn + '</div></td>' +
       '</tr>';
     }).join('');
+  }
+
+  async function performCustomExtSearch(query) {
+    var resultsWrap = content.querySelector('[data-custom-ext-results]');
+    var tbody = content.querySelector('[data-custom-ext-results-tbody]');
+    var select = content.querySelector('[data-ext-version-select]');
+    var version = select ? select.value : '';
+    if (!resultsWrap || !tbody || !version) return;
+
+    var clean = query.toLowerCase().trim().replace(/^php\d*\.?\d*-?/, '');
+    if (!clean) {
+      resultsWrap.style.display = 'none';
+      tbody.innerHTML = '';
+      return;
+    }
+
+    try {
+      var res = await fetch('/api/dependencies/php/versions/' + encodeURIComponent(version) + '/search-extensions?q=' + encodeURIComponent(clean));
+      var data = await res.json().catch(function () { return {}; });
+      var results = (data && data.results) || [];
+      if (!results.length) {
+        tbody.innerHTML = '<tr><td class="text-muted" style="padding:8px 12px;">No APT package found starting with php' + version + '-' + clean + '. You can still click Install to attempt installation.</td></tr>';
+        resultsWrap.style.display = 'block';
+        return;
+      }
+
+      tbody.innerHTML = results.map(function (item) {
+        var actionBtn = item.installed
+          ? '<span class="badge-minimal badge-minimal--active">Installed</span>'
+          : '<button class="btn btn--secondary btn--sm" type="button" data-ext-action="install" data-ext-name="' + item.name + '" data-ext-ver="' + version + '">Install</button>';
+
+        return '<tr>' +
+          '<td style="padding:6px 12px;"><strong style="color:var(--color-text);">' + item.name + '</strong> <span class="text-muted text-small">(' + item.package + ')</span><div class="text-small text-muted">' + (item.description || '') + '</div></td>' +
+          '<td style="text-align:right; padding:6px 12px;">' + actionBtn + '</td>' +
+        '</tr>';
+      }).join('');
+      resultsWrap.style.display = 'block';
+    } catch (_) {
+      resultsWrap.style.display = 'none';
+    }
   }
 
   function bindExtensionControls() {
@@ -296,13 +337,43 @@
       }
     });
 
-    // Custom Extension Install Form
+    // Expand / Collapse Custom Extension Section
+    var customToggle = content.querySelector('[data-custom-ext-toggle]');
+    var customSection = content.querySelector('[data-custom-ext-section]');
+    if (customToggle && customToggle.dataset.bound !== 'true') {
+      customToggle.dataset.bound = 'true';
+      customToggle.addEventListener('click', function () {
+        if (!customSection) return;
+        var isHidden = customSection.hidden;
+        customSection.hidden = !isHidden;
+        customToggle.textContent = isHidden ? '✕ Close Installer' : '+ Install Any Extension';
+        if (isHidden) {
+          var input = customSection.querySelector('[data-custom-ext-input]');
+          if (input) input.focus();
+        }
+      });
+    }
+
+    // Live search in custom extension input
+    var customExtInput = content.querySelector('[data-custom-ext-input]');
+    if (customExtInput && customExtInput.dataset.bound !== 'true') {
+      customExtInput.dataset.bound = 'true';
+      customExtInput.addEventListener('input', function () {
+        var val = customExtInput.value;
+        if (customExtSearchTimer) clearTimeout(customExtSearchTimer);
+        customExtSearchTimer = setTimeout(function () {
+          performCustomExtSearch(val);
+        }, 300);
+      });
+    }
+
+    // Custom Extension Install Form submit
     var customExtForm = content.querySelector('[data-custom-ext-form]');
     if (customExtForm && customExtForm.dataset.bound !== 'true') {
       customExtForm.dataset.bound = 'true';
       customExtForm.addEventListener('submit', async function (e) {
         e.preventDefault();
-        var nameInput = customExtForm.querySelector('[data-custom-ext-name]');
+        var nameInput = customExtForm.querySelector('[data-custom-ext-input]');
         var submitBtn = customExtForm.querySelector('[data-custom-ext-submit]');
         var extName = (nameInput ? nameInput.value : '').toLowerCase().trim().replace(/^php\d*\.?\d*-?/, '');
         var verSelect = content.querySelector('[data-ext-version-select]');
@@ -328,6 +399,8 @@
           if (!res.ok || !payload.success) throw new Error(payload.detail || 'Failed to install ' + extName);
           if (window.toast) window.toast(payload.message || ('Extension ' + extName + ' installed successfully.'), 'success');
           if (nameInput) nameInput.value = '';
+          var resultsWrap = content.querySelector('[data-custom-ext-results]');
+          if (resultsWrap) resultsWrap.style.display = 'none';
           await loadExtensions();
         } catch (err) {
           if (window.toast) window.toast(err.message, 'error');

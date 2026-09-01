@@ -569,6 +569,40 @@ def uninstall_extension(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def search_available_extensions(data: dict[str, Any]) -> dict[str, Any]:
+    item_version = version(data.get("version"))
+    query = str(data.get("query") or "").strip().lower()
+    prefix = f"php{item_version}-"
+    results = []
+    if os.name != "nt":
+        try:
+            res = subprocess.run(
+                ["apt-cache", "search", f"^{prefix}"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            for line in res.stdout.splitlines():
+                if " - " in line:
+                    pkg, desc = line.split(" - ", 1)
+                    pkg = pkg.strip()
+                    desc = desc.strip()
+                    if pkg.startswith(prefix):
+                        ext_name = pkg[len(prefix):]
+                        if not query or query in ext_name.lower() or query in desc.lower():
+                            installed = package_installed(pkg)
+                            results.append({
+                                "name": ext_name,
+                                "package": pkg,
+                                "description": desc,
+                                "installed": installed,
+                            })
+        except Exception:
+            pass
+    return {"version": item_version, "results": results[:30]}
+
+
 def list_managed(_: dict[str, Any]) -> dict[str, Any]:
     return {"versions": sorted(load_state(), key=lambda value: tuple(int(part) for part in value.split(".")))}
 
@@ -579,6 +613,7 @@ OPERATIONS = {
     "install_version": install_version,
     "install_site_extensions": install_site_extensions,
     "list_extensions": list_extensions,
+    "search_available_extensions": search_available_extensions,
     "install_extension": install_extension,
     "uninstall_extension": uninstall_extension,
     "set_all_enabled": set_all_enabled,

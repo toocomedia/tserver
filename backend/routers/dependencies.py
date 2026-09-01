@@ -579,6 +579,16 @@ async def php_list_extensions(version: str):
         return JSONResponse({"success": False, "detail": str(exc)}, status_code=400)
 
 
+@router.get("/api/dependencies/php/versions/{version}/search-extensions")
+async def php_search_extensions(version: str, q: str = ""):
+    from dependencies.php.extension_service import php_extension_service
+    try:
+        data = await asyncio.to_thread(php_extension_service.search_extensions, version, q)
+        return {"success": True, **data}
+    except Exception as exc:
+        return JSONResponse({"success": False, "detail": str(exc)}, status_code=400)
+
+
 @router.post("/api/dependencies/php/versions/{version}/extensions/{extension}/install")
 async def php_install_extension(
     version: str,

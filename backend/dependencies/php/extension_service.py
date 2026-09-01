@@ -91,6 +91,13 @@ class PhpExtensionService:
         with self._lock:
             return self._call("list_extensions", version=normalized)
 
+    def search_extensions(self, version: str, query: str) -> dict[str, Any]:
+        normalized = self._valid_version(version)
+        if not normalized:
+            raise ValueError(f"Invalid PHP version: {version}")
+        with self._lock:
+            return self._call("search_available_extensions", version=normalized, query=str(query or "").strip())
+
     def install_extension(self, version: str, extension: str) -> tuple[bool, str]:
         normalized = self._valid_version(version)
         if not normalized:
