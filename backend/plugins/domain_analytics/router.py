@@ -4,7 +4,9 @@ plugins/domain_analytics/router.py — FastAPI endpoints for Domain Analytics.
 from __future__ import annotations
 
 from typing import Optional
-from fastapi import APIRouter, Request, Depends, Form, HTTPException
+import tempfile
+from pathlib import Path
+from fastapi import APIRouter, Request, Depends, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -87,7 +89,7 @@ async def api_toggle_domain(domain_name: str, payload: dict):
 
 @router.get("/settings", response_class=HTMLResponse)
 async def analytics_settings_view(request: Request):
-    """Settings page: Optional GeoIP toggle, data retention, database status."""
+    """Settings page: GeoIP toggle, download manager, custom upload, retention."""
     settings = geoip_service.get_settings()
     with get_db() as conn:
         row = conn.execute("SELECT value FROM settings WHERE key = 'retention_days'").fetchone()
@@ -109,6 +111,32 @@ async def api_toggle_geoip(enabled: str = Form(...)):
     is_on = enabled.lower() in ("1", "true", "on", "yes")
     geoip_service.set_enabled(is_on)
     return RedirectResponse("/plugins/domain_analytics/settings?message=GeoIP+settings+updated", status_code=303)
+
+
+@router.post("/settings/geoip/download")
+async def api_download_geoip(db_type: str = Form("country"), custom_url: str = Form("")):
+    """Download GeoLite2 database from GitHub or custom URL."""
+    success, msg = geoip_service.download_database(db_type=db_type, custom_url=custom_url)
+    param = "message=" + msg if success else "error=" + msg
+    return RedirectResponse(f"/plugins/domain_analytics/settings?{param}", status_code=303)
+
+
+@router.post("/settings/geoip/upload")
+async def api_upload_geoip(file: UploadFile = File(...)):
+    """Upload custom .mmdb database file."""
+    if not file.filename or not file.filename.endswith(".mmdb"):
+        return RedirectResponse("/plugins/domain_analytics/settings?error=Invalid+file+format.+Must+be+.mmdb", status_code=303)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mmdb") as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+
+    success, msg = geoip_service.install_custom_file(tmp_path)
+    tmp_path.unlink(missing_ok=True)
+
+    param = "message=" + msg if success else "error=" + msg
+    return RedirectResponse(f"/plugins/domain_analytics/settings?{param}", status_code=303)
 
 
 @router.post("/settings/retention")

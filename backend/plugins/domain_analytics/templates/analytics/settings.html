@@ -48,16 +48,57 @@
         </div>
       </form>
 
-      <div class="analytics-info-block">
+      <div class="analytics-info-block mb-lg">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
           <span class="text-muted">Status:</span>
           <span>{% if settings.enabled %}<span class="text-success">Enabled</span>{% else %}<span class="text-muted">Disabled (0% Overhead)</span>{% endif %}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span class="text-muted">Database File:</span>
+          <span>{% if settings.installed %}<span class="text-success">Installed ({{ settings.size_mb }} MB)</span>{% else %}<span class="text-muted">Not Found (Optional)</span>{% endif %}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span class="text-muted">Target Path:</span>
+          <code>{{ settings.path }}</code>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span class="text-muted">Cached Unique IPs:</span>
           <code>{{ settings.cached_ips }} IPs cached</code>
         </div>
       </div>
+
+      <!-- MMDB Download Manager: 1-Click Download -->
+      <form action="/plugins/domain_analytics/settings/geoip/download" method="POST" class="mb-md">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <label class="form-label" style="font-weight: 600;">1-Click Download Database</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <select name="db_type" class="form-control" style="flex: 1;">
+            <option value="country" {% if settings.db_type == 'country' %}selected{% endif %}>GeoLite2-Country (~4 MB)</option>
+            <option value="city" {% if settings.db_type == 'city' %}selected{% endif %}>GeoLite2-City (~30 MB)</option>
+          </select>
+          <button type="submit" class="btn btn--primary">Download & Install</button>
+        </div>
+      </form>
+
+      <!-- Download from Custom URL -->
+      <form action="/plugins/domain_analytics/settings/geoip/download" method="POST" class="mb-md">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <label class="form-label" style="font-weight: 600;">Download from Custom URL</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <input type="url" name="custom_url" placeholder="https://example.com/GeoLite2-City.mmdb" class="form-control" style="flex: 1;">
+          <button type="submit" class="btn btn--secondary">Fetch</button>
+        </div>
+      </form>
+
+      <!-- Custom .mmdb Upload -->
+      <form action="/plugins/domain_analytics/settings/geoip/upload" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <label class="form-label" style="font-weight: 600;">Upload Custom .mmdb File</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <input type="file" name="file" accept=".mmdb" class="form-control" style="flex: 1;" required>
+          <button type="submit" class="btn btn--secondary">Upload</button>
+        </div>
+      </form>
     </div>
   </div>
 

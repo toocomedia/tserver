@@ -109,15 +109,30 @@ class DomainAnalyticsService:
         return str(candidates[0])
 
     def clear_domain_data(self, domain_name: str) -> None:
-        """Wipe all historical stats and reset tracking offsets for a domain."""
+        """Wipe all historical stats and advance tracking offset to current end of file."""
         with get_db() as conn:
+            d = conn.execute("SELECT log_path FROM tracked_domains WHERE domain_name = ?", (domain_name,)).fetchone()
+            saved_path = d["log_path"] if d else ""
+            log_path = Path(saved_path) if saved_path and Path(saved_path).exists() else Path(self.resolve_domain_log_path(domain_name))
+
+            curr_offset = 0
+            curr_inode = 0
+            if log_path.exists() and log_path.is_file():
+                st = log_path.stat()
+                curr_offset = st.st_size
+                curr_inode = st.st_ino
+
             conn.execute("DELETE FROM hourly_stats WHERE domain_name = ?", (domain_name,))
             conn.execute("DELETE FROM daily_visitors WHERE domain_name = ?", (domain_name,))
             conn.execute("DELETE FROM top_paths WHERE domain_name = ?", (domain_name,))
             conn.execute("DELETE FROM top_referrers WHERE domain_name = ?", (domain_name,))
             conn.execute("DELETE FROM error_logs WHERE domain_name = ?", (domain_name,))
             conn.execute("DELETE FROM geo_stats WHERE domain_name = ?", (domain_name,))
-            conn.execute("UPDATE tracked_domains SET last_offset = 0, last_inode = 0, log_path = '' WHERE domain_name = ?", (domain_name,))
+            conn.execute(
+                "UPDATE tracked_domains SET last_offset = ?, last_inode = ?, log_path = ? WHERE domain_name = ?",
+                (curr_offset, curr_inode, str(log_path), domain_name),
+            )
+        logger.info("Cleared analytics data for domain %s (offset advanced to %d)", domain_name, curr_offset)
 
     def process_domain_log(self, domain_name: str, from_beginning: bool = False, force: bool = False) -> dict:
         """Process logs for a specific domain immediately. Respects is_active unless force=True."""
