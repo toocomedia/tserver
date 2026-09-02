@@ -29,7 +29,7 @@ class DomainAnalyticsService:
         # Auto-heal: clear out any buggy PHP log paths from the database
         # so that all affected domains automatically re-resolve their correct static paths.
         with get_db() as conn:
-            conn.execute("UPDATE tracked_domains SET log_path = '' WHERE log_path LIKE '%/php-sites/%'")
+            conn.execute("UPDATE tracked_domains SET log_path = '' WHERE log_path LIKE '%/php-sites/%' OR log_path = '/var/log/nginx/access.log'")
 
     def is_installed(self) -> bool:
         return True
@@ -81,11 +81,6 @@ class DomainAnalyticsService:
         for c in candidates:
             if c.exists() and c.is_file():
                 return str(c)
-
-        for ldir in log_dirs:
-            fallback = ldir / "access.log"
-            if fallback.exists():
-                return str(fallback)
 
         return str(candidates[0])
 
