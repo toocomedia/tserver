@@ -53,14 +53,17 @@ if ! command -v git &>/dev/null; then
   apt-get update -y && apt-get install -y git
 fi
 
-echo -e "${GRN}==>${NC} Cloning ${REPO_URL} (${REPO_REF}) → temp dir..."
+echo -e "${GRN}==>${NC} Downloading archive for ${REPO_REF} → temp dir..."
 rm -rf "$CLONE_DIR"
-git init -q "$CLONE_DIR"
-git -C "$CLONE_DIR" remote add origin "$REPO_URL"
-git -C "$CLONE_DIR" fetch --depth 1 origin "$REPO_REF"
-git -C "$CLONE_DIR" checkout -q --detach FETCH_HEAD
-SOURCE_COMMIT="$(git -C "$CLONE_DIR" rev-parse HEAD)"
-echo -e "${GRN}==>${NC} Resolved source commit: ${SOURCE_COMMIT}"
+mkdir -p "$CLONE_DIR"
+
+TAR_URL="https://github.com/toocomedia/tserver/archive/${REPO_REF}.tar.gz"
+if ! curl -fsSL "$TAR_URL" | tar -xz -C "$CLONE_DIR" --strip-components=1 2>/dev/null; then
+  die "Failed to download repository archive for ${REPO_REF} from GitHub."
+fi
+
+SOURCE_COMMIT="${REPO_REF}"
+echo -e "${GRN}==>${NC} Downloaded source for: ${SOURCE_COMMIT}"
 
 export SOURCE_DIR="$CLONE_DIR"
 export PANEL_DIR
