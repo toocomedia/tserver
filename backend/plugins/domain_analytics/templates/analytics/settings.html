@@ -54,6 +54,11 @@
           <span class="text-muted">Target Path:</span>
           <code>{{ settings.path }}</code>
         </div>
+        {% if settings.installed and not settings.reader_loaded %}
+        <div class="alert alert--danger mt-sm" style="font-size: 13px; padding: 10px;">
+          <strong>Error:</strong> The <code>maxminddb</code> Python library is missing. Even though the database is downloaded, the plugin cannot read it. Please run <code>pip install maxminddb</code> on your server to enable it.
+        </div>
+        {% endif %}
       </div>
 
       <!-- 1-Click Download Pre-configured DB -->

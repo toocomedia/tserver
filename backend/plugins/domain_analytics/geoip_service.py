@@ -65,6 +65,7 @@ class GeoIPService:
             "db_type": data.get("geoip_db_type", "country"),
             "custom_url": data.get("geoip_custom_url", ""),
             "installed": self.is_installed(),
+            "reader_loaded": self._reader is not None,
             "path": str(self._db_path),
             "size_mb": round(self._db_path.stat().st_size / (1024 * 1024), 2) if self.is_installed() else 0,
         }
