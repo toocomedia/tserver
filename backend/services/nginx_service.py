@@ -55,6 +55,16 @@ def ensure_acme_root() -> None:
     logger.info("Acme root ensured: %s", path)
 
 
+def ensure_domain_logs_dir() -> Path:
+    """Create /var/log/nginx/domains for per-domain access and error logs."""
+    path = Path("/var/log/nginx/domains")
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+    return path
+
+
 async def ensure_acme_root_privileged() -> str:
     """
     Ensure ACME webroot exists with permissions certbot + nginx can use.
@@ -136,6 +146,7 @@ async def create_static_site(domain: str) -> str:
     Write HTTP static site nginx config.
     Returns path to config file. Raises on nginx -t failure.
     """
+    ensure_domain_logs_dir()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_config(domain, webroot)
@@ -156,6 +167,7 @@ async def update_static_site_ssl(
     Replace HTTP config with HTTP+HTTPS config after SSL cert is issued.
     Returns new config path.
     """
+    ensure_domain_logs_dir()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_ssl_config(domain, webroot, cert_path, key_path)

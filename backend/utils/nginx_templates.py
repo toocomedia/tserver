@@ -188,6 +188,9 @@ server {{
     root {webroot};
     index index.html;
 
+    access_log /var/log/nginx/domains/{domain}.access.log;
+    error_log /var/log/nginx/domains/{domain}.error.log;
+
     # Certbot HTTP-01 challenge (shared acme dir)
     location /.well-known/acme-challenge/ {{
         root {config.NGINX_WEBROOT}/acme-challenge;
@@ -214,6 +217,9 @@ server {{
     listen [::]:80;
     server_name {domain} www.{domain};
 
+    access_log /var/log/nginx/domains/{domain}.access.log;
+    error_log /var/log/nginx/domains/{domain}.error.log;
+
     # Certbot HTTP-01 challenge
     location /.well-known/acme-challenge/ {{
         root {config.NGINX_WEBROOT}/acme-challenge;
@@ -237,6 +243,9 @@ server {{
 
     root {webroot};
     index index.html;
+
+    access_log /var/log/nginx/domains/{domain}.access.log;
+    error_log /var/log/nginx/domains/{domain}.error.log;
 
     location /.well-known/acme-challenge/ {{
         root {config.NGINX_WEBROOT}/acme-challenge;

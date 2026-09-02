@@ -26,6 +26,7 @@ async def analytics_index(request: Request, db: AsyncSession = Depends(get_panel
     """Main Analytics page: lists all hosted domains with 24h summary metrics."""
     panel_domains = (await db.execute(select(Domain.name))).scalars().all()
     domain_analytics_service.sync_domains_from_panel(list(panel_domains))
+    domain_analytics_service.process_all_active_domains()
 
     summaries = domain_analytics_service.list_domains_summary()
     status = domain_analytics_service.get_status()
@@ -41,6 +42,7 @@ async def analytics_index(request: Request, db: AsyncSession = Depends(get_panel
 @router.get("/domain/{domain_name}", response_class=HTMLResponse)
 async def analytics_domain_view(request: Request, domain_name: str, days: int = 7):
     """Detailed analytics view for a single domain."""
+    domain_analytics_service.process_all_active_domains()
     stats = domain_analytics_service.get_domain_detail(domain_name, days=days)
     return templates.TemplateResponse("analytics/domain_detail.html", {
         "request": request,
@@ -54,6 +56,7 @@ async def analytics_domain_view(request: Request, domain_name: str, days: int = 
 @router.get("/api/domain/{domain_name}/stats", response_class=JSONResponse)
 async def api_domain_stats(domain_name: str, days: int = 7):
     """JSON API endpoint for dynamic charts."""
+    domain_analytics_service.process_all_active_domains()
     return domain_analytics_service.get_domain_detail(domain_name, days=days)
 
 
