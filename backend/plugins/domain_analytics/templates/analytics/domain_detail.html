@@ -30,6 +30,7 @@
   <span>
     {% if stats.sync_result and stats.sync_result.file_exists %}
       <span class="badge badge--success">Log Connected ({{ "%.1f" | format(stats.sync_result.file_size_bytes / 1024) }} KB)</span>
+      <span class="badge badge--info ml-sm">Last Sync: {{ stats.sync_result.processed_lines }} lines parsed</span>
     {% else %}
       <span class="badge badge--muted">Waiting for traffic</span>
     {% endif %}
