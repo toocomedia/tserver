@@ -3,10 +3,8 @@ plugins/domain_analytics/router.py — FastAPI endpoints for Domain Analytics.
 """
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, Request, Depends, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -16,6 +14,7 @@ from models.domain import Domain
 from templating import templates
 from plugins.domain_analytics.service import domain_analytics_service
 from plugins.domain_analytics.geoip_service import geoip_service
+from plugins.domain_analytics.db import get_db
 
 router = APIRouter(prefix="/plugins/domain_analytics", tags=["domain_analytics"])
 
@@ -41,8 +40,11 @@ async def analytics_index(request: Request, db: AsyncSession = Depends(get_panel
 
 @router.get("/domain/{domain_name}", response_class=HTMLResponse)
 async def analytics_domain_view(request: Request, domain_name: str, days: int = 7):
-    """Detailed analytics view for a single domain."""
-    sync_result = domain_analytics_service.process_domain_log(domain_name)
+    """Detailed analytics view for a single domain. Respects pause status."""
+    is_active = domain_analytics_service.get_domain_active_status(domain_name)
+    sync_result = domain_analytics_service.process_domain_log(domain_name) if is_active else {
+        "success": False, "message": f"Tracking is paused for {domain_name}", "processed_lines": 0
+    }
     stats = domain_analytics_service.get_domain_detail(domain_name, days=days)
     stats["sync_result"] = sync_result
     return templates.TemplateResponse("analytics/domain_detail.html", {
@@ -57,14 +59,13 @@ async def analytics_domain_view(request: Request, domain_name: str, days: int = 
 @router.get("/api/domain/{domain_name}/stats", response_class=JSONResponse)
 async def api_domain_stats(domain_name: str, days: int = 7):
     """JSON API endpoint for dynamic charts."""
-    domain_analytics_service.process_domain_log(domain_name)
     return domain_analytics_service.get_domain_detail(domain_name, days=days)
 
 
 @router.post("/api/domain/{domain_name}/sync", response_class=JSONResponse)
 async def api_sync_domain_logs(domain_name: str):
-    """Manual sync trigger for domain logs."""
-    return domain_analytics_service.process_domain_log(domain_name)
+    """Manual sync trigger for domain logs (forced)."""
+    return domain_analytics_service.process_domain_log(domain_name, force=True)
 
 
 @router.post("/api/domain/{domain_name}/clear", response_class=JSONResponse)
@@ -86,8 +87,13 @@ async def api_toggle_domain(domain_name: str, payload: dict):
 
 @router.get("/settings", response_class=HTMLResponse)
 async def analytics_settings_view(request: Request):
-    """Settings page: GeoIP toggle, download, custom upload, retention."""
+    """Settings page: Optional GeoIP toggle, data retention, database status."""
     settings = geoip_service.get_settings()
+    with get_db() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key = 'retention_days'").fetchone()
+        retention_days = int(row["value"]) if row else 60
+    settings["retention_days"] = retention_days
+
     return templates.TemplateResponse("analytics/settings.html", {
         "request": request,
         "active_page": "domain_analytics",
@@ -99,33 +105,19 @@ async def analytics_settings_view(request: Request):
 
 @router.post("/settings/geoip/toggle")
 async def api_toggle_geoip(enabled: str = Form(...)):
-    """Toggle GeoIP tracking on/off."""
+    """Toggle optional GeoIP tracking on/off."""
     is_on = enabled.lower() in ("1", "true", "on", "yes")
     geoip_service.set_enabled(is_on)
     return RedirectResponse("/plugins/domain_analytics/settings?message=GeoIP+settings+updated", status_code=303)
 
 
-@router.post("/settings/geoip/download")
-async def api_download_geoip(db_type: str = Form("country"), custom_url: str = Form("")):
-    """Trigger GeoLite2 download."""
-    success, msg = geoip_service.download_database(db_type=db_type, custom_url=custom_url)
-    param = "message=" + msg if success else "error=" + msg
-    return RedirectResponse(f"/plugins/domain_analytics/settings?{param}", status_code=303)
-
-
-@router.post("/settings/geoip/upload")
-async def api_upload_geoip(file: UploadFile = File(...)):
-    """Upload custom .mmdb database file."""
-    if not file.filename.endswith(".mmdb"):
-        return RedirectResponse("/plugins/domain_analytics/settings?error=Invalid+file+format.+Must+be+.mmdb", status_code=303)
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mmdb") as tmp:
-        content = await file.read()
-        tmp.write(content)
-        tmp_path = Path(tmp.name)
-
-    success, msg = geoip_service.install_custom_file(tmp_path)
-    tmp_path.unlink(missing_ok=True)
-
-    param = "message=" + msg if success else "error=" + msg
-    return RedirectResponse(f"/plugins/domain_analytics/settings?{param}", status_code=303)
+@router.post("/settings/retention")
+async def api_update_retention(retention_days: int = Form(60)):
+    """Update data retention period in days."""
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES ('retention_days', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (str(retention_days),)
+        )
+    return RedirectResponse("/plugins/domain_analytics/settings?message=Retention+period+updated", status_code=303)

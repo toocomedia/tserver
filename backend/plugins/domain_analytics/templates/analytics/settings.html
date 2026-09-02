@@ -19,25 +19,28 @@
 <div class="alert alert--danger mb-md">{{ error }}</div>
 {% endif %}
 
-<div class="analytics-settings-grid">
-  <!-- GeoIP Module Card -->
+<div class="analytics-settings-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+  <!-- Optional GeoIP Module Card -->
   <div class="analytics-card">
     <div class="analytics-card-header">
-      <h3 class="analytics-card-title">GeoIP (Country & City Resolution)</h3>
+      <h3 class="analytics-card-title">GeoIP Country Tracking (Optional)</h3>
       <span class="badge {% if settings.enabled %}badge--success{% else %}badge--muted{% endif %}">
         {% if settings.enabled %}Active{% else %}Disabled{% endif %}
       </span>
     </div>
 
     <div class="analytics-card-body">
-      <p class="text-muted" style="margin-bottom: 20px;">
-        Optional IP-to-Country geolocation from MaxMind GeoLite2 binary databases (.mmdb). Disabled by default for maximum processing speed.
+      <p class="text-muted" style="margin-bottom: 20px; font-size: 13px; line-height: 1.5;">
+        Optional IP-to-Country geolocation. Uses a zero-dependency, persistent SQLite cache so unique visitor IPs are resolved once in their lifetime without slowing down log parsing.
       </p>
 
       <form action="/plugins/domain_analytics/settings/geoip/toggle" method="POST" class="mb-lg">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span><strong>Enable GeoIP Tracking</strong></span>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div>
+            <strong>Enable GeoIP Tracking</strong>
+            <div class="text-muted" style="font-size: 12px; margin-top: 2px;">Resolve visitor country codes</div>
+          </div>
           <label class="analytics-toggle">
             <input type="checkbox" name="enabled" value="1" {% if settings.enabled %}checked{% endif %} onchange="this.form.submit()">
             <span class="analytics-toggle-slider"></span>
@@ -45,51 +48,41 @@
         </div>
       </form>
 
-      <div class="analytics-info-block mb-lg">
+      <div class="analytics-info-block">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span class="text-muted">Database File:</span>
-          <span>{% if settings.installed %}Installed ({{ settings.size_mb }} MB){% else %}<span class="text-warning">Not Found</span>{% endif %}</span>
+          <span class="text-muted">Status:</span>
+          <span>{% if settings.enabled %}<span class="text-success">Enabled</span>{% else %}<span class="text-muted">Disabled (0% Overhead)</span>{% endif %}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span class="text-muted">Target Path:</span>
-          <code>{{ settings.path }}</code>
+          <span class="text-muted">Cached Unique IPs:</span>
+          <code>{{ settings.cached_ips }} IPs cached</code>
         </div>
-        {% if settings.installed and not settings.reader_loaded %}
-        <div class="alert alert--danger mt-sm" style="font-size: 13px; padding: 10px;">
-          <strong>Error:</strong> The <code>maxminddb</code> Python library is missing. Even though the database is downloaded, the plugin cannot read it. Please run <code>pip install maxminddb</code> on your server to enable it.
-        </div>
-        {% endif %}
       </div>
+    </div>
+  </div>
 
-      <!-- 1-Click Download Pre-configured DB -->
-      <form action="/plugins/domain_analytics/settings/geoip/download" method="POST" class="mb-lg">
+  <!-- Data Retention Card -->
+  <div class="analytics-card">
+    <div class="analytics-card-header">
+      <h3 class="analytics-card-title">Data Retention</h3>
+    </div>
+
+    <div class="analytics-card-body">
+      <p class="text-muted" style="margin-bottom: 20px; font-size: 13px; line-height: 1.5;">
+        Automatically purge historical traffic, top paths, and error logs older than the retention period to keep SQLite storage minimal and fast.
+      </p>
+
+      <form action="/plugins/domain_analytics/settings/retention" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <label class="form-label" style="font-weight: 600;">Download Pre-configured Database</label>
-        <div style="display: flex; gap: 8px; margin-top: 6px;">
-          <select name="db_type" class="form-control" style="flex: 1;">
-            <option value="country" {% if settings.db_type == 'country' %}selected{% endif %}>GeoLite2-Country (~4 MB)</option>
-            <option value="city" {% if settings.db_type == 'city' %}selected{% endif %}>GeoLite2-City (~30 MB)</option>
+        <label class="form-label" style="font-weight: 600; display: block; margin-bottom: 8px;">Keep Analytics For</label>
+        <div style="display: flex; gap: 8px;">
+          <select name="retention_days" class="form-control" style="flex: 1;">
+            <option value="30" {% if settings.retention_days == 30 %}selected{% endif %}>30 Days (~1 Month)</option>
+            <option value="60" {% if settings.retention_days == 60 %}selected{% endif %}>60 Days (~2 Months)</option>
+            <option value="90" {% if settings.retention_days == 90 %}selected{% endif %}>90 Days (~3 Months)</option>
+            <option value="180" {% if settings.retention_days == 180 %}selected{% endif %}>180 Days (~6 Months)</option>
           </select>
-          <button type="submit" class="btn btn--primary">Download & Install</button>
-        </div>
-      </form>
-
-      <!-- Custom URL / Upload -->
-      <form action="/plugins/domain_analytics/settings/geoip/download" method="POST" class="mb-lg">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <label class="form-label" style="font-weight: 600;">Download from Custom URL</label>
-        <div style="display: flex; gap: 8px; margin-top: 6px;">
-          <input type="url" name="custom_url" placeholder="https://example.com/GeoLite2-City.mmdb" class="form-control" style="flex: 1;">
-          <button type="submit" class="btn btn--secondary">Fetch</button>
-        </div>
-      </form>
-
-      <form action="/plugins/domain_analytics/settings/geoip/upload" method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <label class="form-label" style="font-weight: 600;">Upload Custom .mmdb File</label>
-        <div style="display: flex; gap: 8px; margin-top: 6px;">
-          <input type="file" name="file" accept=".mmdb" class="form-control" style="flex: 1;" required>
-          <button type="submit" class="btn btn--secondary">Upload</button>
+          <button type="submit" class="btn btn--primary">Save</button>
         </div>
       </form>
     </div>

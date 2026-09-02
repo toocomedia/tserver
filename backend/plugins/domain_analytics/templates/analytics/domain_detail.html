@@ -151,6 +151,7 @@
 </div>
 
 <!-- Optional GeoIP Section (Rendered dynamically if GeoIP active) -->
+<!-- Optional GeoIP Section -->
 {% if stats.geoip_enabled or stats.geo_stats %}
 <div class="analytics-card mt-md">
   <div class="analytics-card-header">
@@ -176,6 +177,16 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
+{% else %}
+<div class="analytics-card mt-md" style="padding: 16px; border: 1px dashed rgba(255, 255, 255, 0.15); background: transparent;">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h4 class="analytics-card-title" style="margin: 0;">Geographic Locations</h4>
+      <p class="text-muted" style="margin: 4px 0 0 0; font-size: 13px;">Visitor country tracking is optional and currently disabled.</p>
+    </div>
+    <a href="/plugins/domain_analytics/settings" class="btn btn--sm btn--secondary">Enable in Settings</a>
+  </div>
 </div>
 {% endif %}
 

@@ -3,7 +3,6 @@ plugins/domain_analytics/service.py — Domain Analytics service lifecycle & bac
 """
 from __future__ import annotations
 
-import os
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
@@ -15,6 +14,7 @@ from plugins.domain_analytics.db import init_db, get_db
 from plugins.domain_analytics.log_parser import parse_log_file
 from plugins.domain_analytics.aggregator import process_domain_entries, prune_old_data
 from plugins.domain_analytics.geoip_service import geoip_service
+from plugins.domain_analytics.queries import fetch_domains_summary, fetch_domain_detail
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +26,38 @@ class DomainAnalyticsService:
         self._worker_task: Optional[asyncio.Task] = None
         self._running = False
         init_db()
-        # Auto-heal: clear out any buggy PHP log paths from the database
-        # so that all affected domains automatically re-resolve their correct static paths.
+        # Clean out legacy invalid log paths
         with get_db() as conn:
             conn.execute("UPDATE tracked_domains SET log_path = '' WHERE log_path LIKE '%/php-sites/%' OR log_path = '/var/log/nginx/access.log'")
 
     def is_installed(self) -> bool:
         return True
+
+    async def start(self) -> None:
+        """Start background worker task if not already running."""
+        if self._running and self._worker_task and not self._worker_task.done():
+            return
+        self._running = True
+        self._worker_task = asyncio.create_task(self.run_worker_loop())
+        logger.info("Domain analytics service worker started.")
+
+    async def stop(self) -> None:
+        """Stop background worker task immediately."""
+        self._running = False
+        if self._worker_task and not self._worker_task.done():
+            self._worker_task.cancel()
+            try:
+                await self._worker_task
+            except asyncio.CancelledError:
+                pass
+            self._worker_task = None
+        logger.info("Domain analytics service worker stopped.")
+
+    async def pause(self) -> None:
+        await self.stop()
+
+    async def resume(self) -> None:
+        await self.start()
 
     def get_status(self) -> dict:
         with get_db() as conn:
@@ -49,7 +74,7 @@ class DomainAnalyticsService:
         }
 
     def resolve_domain_log_path(self, domain_name: str) -> str:
-        """Find the appropriate Nginx access log path for the domain across standard and custom /opt paths."""
+        """Find the appropriate Nginx access log path for the domain."""
         domain_safe = domain_name.replace(":", "_")
         domain_no_port = domain_name.split(":")[0]
 
@@ -66,7 +91,6 @@ class DomainAnalyticsService:
             candidates.append(ldir / "domains" / f"{domain_safe}.access.log")
             candidates.append(ldir / f"{domain_safe}.access.log")
             candidates.append(ldir / f"{domain_safe}-access.log")
-            
             if domain_safe != domain_no_port:
                 candidates.append(ldir / "domains" / f"{domain_no_port}.access.log")
                 candidates.append(ldir / f"{domain_no_port}.access.log")
@@ -88,12 +112,25 @@ class DomainAnalyticsService:
         """Wipe all historical stats and reset tracking offsets for a domain."""
         with get_db() as conn:
             conn.execute("DELETE FROM hourly_stats WHERE domain_name = ?", (domain_name,))
+            conn.execute("DELETE FROM daily_visitors WHERE domain_name = ?", (domain_name,))
+            conn.execute("DELETE FROM top_paths WHERE domain_name = ?", (domain_name,))
+            conn.execute("DELETE FROM top_referrers WHERE domain_name = ?", (domain_name,))
+            conn.execute("DELETE FROM error_logs WHERE domain_name = ?", (domain_name,))
+            conn.execute("DELETE FROM geo_stats WHERE domain_name = ?", (domain_name,))
             conn.execute("UPDATE tracked_domains SET last_offset = 0, last_inode = 0, log_path = '' WHERE domain_name = ?", (domain_name,))
 
-    def process_domain_log(self, domain_name: str, from_beginning: bool = False) -> dict:
-        """Process logs for a specific domain immediately and return diagnostics."""
+    def process_domain_log(self, domain_name: str, from_beginning: bool = False, force: bool = False) -> dict:
+        """Process logs for a specific domain immediately. Respects is_active unless force=True."""
         with get_db() as conn:
             d = conn.execute("SELECT * FROM tracked_domains WHERE domain_name = ?", (domain_name,)).fetchone()
+            if not force and d and d["is_active"] == 0:
+                return {
+                    "success": False,
+                    "log_path": d["log_path"] or "",
+                    "file_exists": Path(d["log_path"]).exists() if d["log_path"] else False,
+                    "processed_lines": 0,
+                    "message": f"Tracking is paused for {domain_name}",
+                }
             last_offset = 0 if from_beginning else (d["last_offset"] if d else 0)
             last_inode = d["last_inode"] if d else 0
             saved_path_str = d["log_path"] if d else ""
@@ -114,12 +151,7 @@ class DomainAnalyticsService:
                 "message": f"Log file not found at {log_path}",
             }
 
-        entries, new_offset, new_inode = parse_log_file(
-            log_path,
-            last_offset=last_offset,
-            last_inode=last_inode,
-        )
-
+        entries, new_offset, new_inode = parse_log_file(log_path, last_offset=last_offset, last_inode=last_inode)
         if entries:
             process_domain_entries(domain_name, entries)
 
@@ -145,7 +177,7 @@ class DomainAnalyticsService:
         }
 
     def sync_domains_from_panel(self, panel_domains: List[str]) -> None:
-        """Synchronize known domains into tracked_domains table."""
+        """Synchronize hosted domains into tracked_domains table."""
         with get_db() as conn:
             for domain in panel_domains:
                 default_log = self.resolve_domain_log_path(domain)
@@ -165,7 +197,7 @@ class DomainAnalyticsService:
                     is_active = excluded.is_active,
                     log_path = COALESCE(excluded.log_path, tracked_domains.log_path);
             """, (domain_name, 1 if is_active else 0, resolved_log))
-        logger.info("Domain %s analytics tracking set to %s", domain_name, is_active)
+        logger.info("Domain %s tracking set to %s", domain_name, is_active)
         return True
 
     def get_domain_active_status(self, domain_name: str) -> bool:
@@ -174,168 +206,15 @@ class DomainAnalyticsService:
             return bool(row and row["is_active"] == 1)
 
     def list_domains_summary(self) -> List[Dict[str, Any]]:
-        """Return all tracked domains with their 24h summary metrics."""
-        now = datetime.now(timezone.utc)
-        day_ago = (now - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
-
-        with get_db() as conn:
-            domains = conn.execute("SELECT domain_name, is_active, last_parsed_at, log_path FROM tracked_domains ORDER BY is_active DESC, domain_name ASC").fetchall()
-            results = []
-            for d in domains:
-                dname = d["domain_name"]
-                
-                saved_path_str = d["log_path"]
-                if saved_path_str:
-                    log_path = Path(saved_path_str)
-                    if not log_path.exists():
-                        log_path = Path(self.resolve_domain_log_path(dname))
-                else:
-                    log_path = Path(self.resolve_domain_log_path(dname))
-                log_exists = log_path.exists()
-
-                stats = conn.execute("""
-                    SELECT 
-                        SUM(total_requests) as requests,
-                        SUM(unique_ips) as ips,
-                        SUM(bandwidth_bytes) as bytes,
-                        SUM(status_4xx + status_5xx) as errors,
-                        AVG(avg_response_time_ms) as avg_time
-                    FROM hourly_stats
-                    WHERE domain_name = ? AND hour_timestamp >= ?
-                """, (dname, day_ago)).fetchone()
-
-                reqs = stats["requests"] or 0
-                errs = stats["errors"] or 0
-                error_rate = round((errs / reqs) * 100, 1) if reqs > 0 else 0.0
-
-                results.append({
-                    "domain_name": dname,
-                    "is_active": bool(d["is_active"]),
-                    "last_parsed_at": d["last_parsed_at"],
-                    "requests_24h": reqs,
-                    "unique_ips_24h": stats["ips"] or 0,
-                    "bandwidth_bytes_24h": stats["bytes"] or 0,
-                    "error_rate_24h": error_rate,
-                    "avg_response_time_ms": round(stats["avg_time"] or 0.0, 1),
-                    "diagnostic_log_path": str(log_path),
-                    "diagnostic_log_exists": log_exists,
-                })
-            return results
+        """Return all tracked domains with their 24h summary metrics using exact distinct visitors."""
+        return fetch_domains_summary(self.resolve_domain_log_path)
 
     def get_domain_detail(self, domain_name: str, days: int = 7) -> Dict[str, Any]:
-        """Fetch detailed charts and reports for a specific domain."""
-        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=days)
-        cutoff_str = cutoff_dt.strftime("%Y-%m-%d %H:%M:%S")
-        cutoff_date = cutoff_dt.strftime("%Y-%m-%d")
-
-        with get_db() as conn:
-            domain_info = conn.execute(
-                "SELECT * FROM tracked_domains WHERE domain_name = ?", (domain_name,)
-            ).fetchone()
-            if not domain_info:
-                # Ensure domain entry exists
-                self.toggle_domain(domain_name, is_active=False)
-                domain_info = {"domain_name": domain_name, "is_active": 0, "log_path": ""}
-
-            saved_path_str = domain_info["log_path"]
-            if saved_path_str:
-                log_path = Path(saved_path_str)
-                if not log_path.exists():
-                    log_path = Path(self.resolve_domain_log_path(domain_name))
-            else:
-                log_path = Path(self.resolve_domain_log_path(domain_name))
-
-            log_exists = log_path.exists()
-            log_size = log_path.stat().st_size if log_exists else 0
-
-            # Hourly timeline
-            hourly_rows = conn.execute("""
-                SELECT hour_timestamp, total_requests, unique_ips, bandwidth_bytes,
-                       status_2xx, status_3xx, status_4xx, status_5xx, avg_response_time_ms
-                FROM hourly_stats
-                WHERE domain_name = ? AND hour_timestamp >= ?
-                ORDER BY hour_timestamp ASC
-            """, (domain_name, cutoff_str)).fetchall()
-
-            # Top paths
-            paths = conn.execute("""
-                SELECT path, SUM(hits) as total_hits, SUM(bandwidth_bytes) as total_bytes, AVG(avg_time_ms) as avg_time
-                FROM top_paths
-                WHERE domain_name = ? AND day_date >= ?
-                GROUP BY path
-                ORDER BY total_hits DESC LIMIT 15
-            """, (domain_name, cutoff_date)).fetchall()
-
-            # Top referrers
-            referrers = conn.execute("""
-                SELECT referrer, SUM(hits) as total_hits
-                FROM top_referrers
-                WHERE domain_name = ? AND day_date >= ?
-                GROUP BY referrer
-                ORDER BY total_hits DESC LIMIT 10
-            """, (domain_name, cutoff_date)).fetchall()
-
-            # Recent errors
-            errors = conn.execute("""
-                SELECT timestamp, status_code, path, ip, referrer
-                FROM error_logs
-                WHERE domain_name = ? AND timestamp >= ?
-                ORDER BY timestamp DESC LIMIT 20
-            """, (domain_name, cutoff_str)).fetchall()
-
-            # GeoIP breakdown (if any)
-            geo_rows = conn.execute("""
-                SELECT country_code, country_name, city_name, SUM(hits) as total_hits
-                FROM geo_stats
-                WHERE domain_name = ? AND day_date >= ?
-                GROUP BY country_code, city_name
-                ORDER BY total_hits DESC LIMIT 15
-            """, (domain_name, cutoff_date)).fetchall()
-
-            # Total aggregates
-            totals = conn.execute("""
-                SELECT 
-                    SUM(total_requests) as requests,
-                    SUM(unique_ips) as ips,
-                    SUM(bandwidth_bytes) as bytes,
-                    SUM(status_2xx) as s2xx,
-                    SUM(status_3xx) as s3xx,
-                    SUM(status_4xx) as s4xx,
-                    SUM(status_5xx) as s5xx,
-                    AVG(avg_response_time_ms) as avg_time
-                FROM hourly_stats
-                WHERE domain_name = ? AND hour_timestamp >= ?
-            """, (domain_name, cutoff_str)).fetchone()
-
-            return {
-                "domain_name": domain_name,
-                "is_active": bool(domain_info["is_active"]),
-                "days": days,
-                "diagnostics": {
-                    "log_path": str(log_path),
-                    "file_exists": log_exists,
-                    "file_size_bytes": log_size,
-                },
-                "totals": {
-                    "requests": totals["requests"] or 0,
-                    "unique_ips": totals["ips"] or 0,
-                    "bandwidth_bytes": totals["bytes"] or 0,
-                    "status_2xx": totals["s2xx"] or 0,
-                    "status_3xx": totals["s3xx"] or 0,
-                    "status_4xx": totals["s4xx"] or 0,
-                    "status_5xx": totals["s5xx"] or 0,
-                    "avg_response_time_ms": round(totals["avg_time"] or 0.0, 1),
-                },
-                "timeline": [dict(r) for r in hourly_rows],
-                "top_paths": [dict(r) for r in paths],
-                "top_referrers": [dict(r) for r in referrers],
-                "recent_errors": [dict(r) for r in errors],
-                "geo_stats": [dict(r) for r in geo_rows],
-                "geoip_enabled": geoip_service.is_enabled(),
-            }
+        """Fetch detailed charts and reports for a specific domain with exact visitor counts."""
+        return fetch_domain_detail(domain_name, days, self.resolve_domain_log_path)
 
     def process_all_active_domains(self) -> int:
-        """Parse new logs for all actively tracked domains."""
+        """Parse new logs for actively tracked domains only."""
         with get_db() as conn:
             domains = conn.execute("SELECT * FROM tracked_domains WHERE is_active = 1").fetchall()
 
@@ -344,24 +223,12 @@ class DomainAnalyticsService:
 
         for d in domains:
             domain_name = d["domain_name"]
-            
-            saved_path_str = d["log_path"]
-            if saved_path_str:
-                log_path = Path(saved_path_str)
-                if not log_path.exists():
-                    log_path = Path(self.resolve_domain_log_path(domain_name))
-            else:
-                log_path = Path(self.resolve_domain_log_path(domain_name))
-
+            saved_path = d["log_path"]
+            log_path = Path(saved_path) if saved_path and Path(saved_path).exists() else Path(self.resolve_domain_log_path(domain_name))
             if not log_path.exists():
                 continue
 
-            entries, new_offset, new_inode = parse_log_file(
-                log_path,
-                last_offset=d["last_offset"],
-                last_inode=d["last_inode"],
-            )
-
+            entries, new_offset, new_inode = parse_log_file(log_path, last_offset=d["last_offset"], last_inode=d["last_inode"])
             if entries:
                 process_domain_entries(domain_name, entries)
                 total_processed += len(entries)
@@ -383,7 +250,6 @@ class DomainAnalyticsService:
             while self._running:
                 try:
                     await asyncio.to_thread(self.process_all_active_domains)
-                    # Periodic retention prune once every 24h
                     now_dt = datetime.now(timezone.utc)
                     if now_dt.hour == 3 and now_dt.minute < 2:
                         await asyncio.to_thread(prune_old_data, 60)

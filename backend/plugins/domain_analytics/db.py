@@ -121,6 +121,21 @@ def init_db() -> None:
             UNIQUE(domain_name, day_date, country_code, city_name)
         );
 
+        CREATE TABLE IF NOT EXISTS daily_visitors (
+            domain_name TEXT NOT NULL,
+            day_date TEXT NOT NULL, -- YYYY-MM-DD
+            ip TEXT NOT NULL,
+            PRIMARY KEY (domain_name, day_date, ip)
+        );
+
+        CREATE TABLE IF NOT EXISTS ip_cache (
+            ip TEXT PRIMARY KEY,
+            country_code TEXT NOT NULL,
+            country_name TEXT NOT NULL,
+            city_name TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
@@ -132,13 +147,20 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_referrers_domain_date ON top_referrers(domain_name, day_date, hits DESC);
         CREATE INDEX IF NOT EXISTS idx_errors_domain_time ON error_logs(domain_name, timestamp DESC);
         CREATE INDEX IF NOT EXISTS idx_geo_domain_date ON geo_stats(domain_name, day_date, hits DESC);
+        CREATE INDEX IF NOT EXISTS idx_visitors_domain_date ON daily_visitors(domain_name, day_date);
         """)
         
+        # Migration: ensure total_response_time_ms exists on existing hourly_stats
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(hourly_stats)").fetchall()]
+        if "total_response_time_ms" not in cols:
+            try:
+                conn.execute("ALTER TABLE hourly_stats ADD COLUMN total_response_time_ms REAL NOT NULL DEFAULT 0.0;")
+            except Exception:
+                pass
+
         # Insert default settings if not exists
         defaults = {
             "geoip_enabled": "0",
-            "geoip_db_type": "country",
-            "geoip_custom_url": "",
             "retention_days": "60"
         }
         for k, v in defaults.items():

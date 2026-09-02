@@ -39,14 +39,29 @@ MONTHS = {
 
 
 def parse_nginx_timestamp(raw_time: str) -> str:
-    """Fast conversion of '02/Sep/2026:10:15:30 +0100' to '2026-09-02 10:15:30'."""
+    """Convert '02/Sep/2026:10:15:30 +0100' reliably to standard UTC 'YYYY-MM-DD HH:MM:SS'."""
     try:
-        parts = raw_time.split()[0].split(":")
+        tokens = raw_time.strip().split()
+        parts = tokens[0].split(":")
         date_parts = parts[0].split("/")
-        day = date_parts[0].zfill(2)
-        month = MONTHS.get(date_parts[1], "01")
-        year = date_parts[2]
-        return f"{year}-{month}-{day} {parts[1]}:{parts[2]}:{parts[3]}"
+        day = int(date_parts[0])
+        month = int(MONTHS.get(date_parts[1], "1"))
+        year = int(date_parts[2])
+        hour = int(parts[1])
+        minute = int(parts[2])
+        second = int(parts[3])
+
+        dt = datetime(year, month, day, hour, minute, second)
+        if len(tokens) > 1:
+            tz_str = tokens[1]
+            if len(tz_str) == 5 and tz_str[0] in ("+", "-"):
+                tz_sign = 1 if tz_str[0] == "+" else -1
+                tz_hours = int(tz_str[1:3])
+                tz_mins = int(tz_str[3:5])
+                offset = timedelta(hours=tz_hours, minutes=tz_mins) * tz_sign
+                dt = dt - offset  # Normalize to UTC
+
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
