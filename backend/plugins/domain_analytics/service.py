@@ -234,7 +234,7 @@ class DomainAnalyticsService:
                 self.toggle_domain(domain_name, is_active=False)
                 domain_info = {"domain_name": domain_name, "is_active": 0, "log_path": ""}
 
-            saved_path_str = domain_info.get("log_path")
+            saved_path_str = domain_info["log_path"]
             if saved_path_str:
                 log_path = Path(saved_path_str)
                 if not log_path.exists():
