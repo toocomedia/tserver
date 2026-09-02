@@ -26,6 +26,10 @@ class DomainAnalyticsService:
         self._worker_task: Optional[asyncio.Task] = None
         self._running = False
         init_db()
+        # Auto-heal: clear out any buggy PHP log paths from the database
+        # so that all affected domains automatically re-resolve their correct static paths.
+        with get_db() as conn:
+            conn.execute("UPDATE tracked_domains SET log_path = '' WHERE log_path LIKE '%/php-sites/%'")
 
     def is_installed(self) -> bool:
         return True
