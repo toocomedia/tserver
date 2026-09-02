@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+
+{% block title %}Analytics — {{ PANEL_NAME }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/plugins/domain_analytics/static/css/analytics.css">
+
+<div class="analytics-header">
+  <div>
+    <h1 class="analytics-title">Domain Analytics</h1>
+    <p class="analytics-subtitle">Zero-latency observability from Nginx logs</p>
+  </div>
+  <div class="analytics-actions">
+    <a href="/plugins/domain_analytics/settings" class="btn btn--secondary" id="btn-analytics-settings">Settings</a>
+  </div>
+</div>
+
+<div class="analytics-kpi-grid">
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">Active Domains</span>
+    <span class="analytics-kpi-val">{{ status.active_domains }} <span class="analytics-kpi-sub">/ {{ status.total_domains }}</span></span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">Total Requests</span>
+    <span class="analytics-kpi-val">{{ "{:,}".format(status.total_recorded_requests) }}</span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">GeoIP Engine</span>
+    <span class="analytics-kpi-val">
+      {% if status.geoip.enabled %}
+        <span class="badge badge--success">Active ({{ status.geoip.db_type | title }})</span>
+      {% else %}
+        <span class="badge badge--muted">Disabled</span>
+      {% endif %}
+    </span>
+  </div>
+</div>
+
+<div class="analytics-card">
+  <div class="analytics-card-header">
+    <h3 class="analytics-card-title">Domains</h3>
+  </div>
+  <div class="analytics-table-wrap">
+    <table class="table analytics-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Status</th>
+          <th>24h Requests</th>
+          <th>24h Visitors</th>
+          <th>24h Bandwidth</th>
+          <th>Avg Latency</th>
+          <th>Error Rate</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in domains %}
+        <tr>
+          <td>
+            <a href="/plugins/domain_analytics/domain/{{ d.domain_name }}" class="analytics-domain-link">
+              <strong>{{ d.domain_name }}</strong>
+            </a>
+          </td>
+          <td>
+            <label class="analytics-toggle">
+              <input type="checkbox" {% if d.is_active %}checked{% endif %} onchange="toggleDomainAnalytics('{{ d.domain_name }}', this.checked)">
+              <span class="analytics-toggle-slider"></span>
+            </label>
+          </td>
+          <td>{{ "{:,}".format(d.requests_24h) }}</td>
+          <td>{{ "{:,}".format(d.unique_ips_24h) }}</td>
+          <td>{{ "%.1f" | format(d.bandwidth_bytes_24h / (1024*1024)) }} MB</td>
+          <td>{{ d.avg_response_time_ms }} ms</td>
+          <td>
+            {% if d.error_rate_24h > 5.0 %}
+              <span class="badge badge--danger">{{ d.error_rate_24h }}%</span>
+            {% else %}
+              <span class="text-muted">{{ d.error_rate_24h }}%</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            <a href="/plugins/domain_analytics/domain/{{ d.domain_name }}" class="btn btn--secondary btn--sm">View Report</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted" style="padding: 32px;">No domains found. Add a domain in Domain Manager to start tracking.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+async function toggleDomainAnalytics(domainName, isActive) {
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const res = await fetch(`/plugins/domain_analytics/api/domain/${encodeURIComponent(domainName)}/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({ is_active: isActive })
+    });
+    if (!res.ok) throw new Error('Failed to update status');
+  } catch (err) {
+    alert('Error updating analytics status: ' + err.message);
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ domain_name }} Analytics — {{ PANEL_NAME }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/plugins/domain_analytics/static/css/analytics.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<div class="analytics-header">
+  <div>
+    <a href="/plugins/domain_analytics" class="analytics-back-link">← All Domains</a>
+    <h1 class="analytics-title" style="margin-top: 4px;">{{ domain_name }}</h1>
+  </div>
+  <div class="analytics-actions">
+    <div class="analytics-days-filter">
+      <a href="?days=1" class="btn btn--sm {% if selected_days == 1 %}btn--primary{% else %}btn--secondary{% endif %}">24h</a>
+      <a href="?days=7" class="btn btn--sm {% if selected_days == 7 %}btn--primary{% else %}btn--secondary{% endif %}">7d</a>
+      <a href="?days=30" class="btn btn--sm {% if selected_days == 30 %}btn--primary{% else %}btn--secondary{% endif %}">30d</a>
+    </div>
+    <label class="analytics-toggle" title="Enable/Disable tracking">
+      <input type="checkbox" {% if stats.is_active %}checked{% endif %} onchange="toggleCurrentDomain(this.checked)">
+      <span class="analytics-toggle-slider"></span>
+    </label>
+  </div>
+</div>
+
+{% if not stats.is_active %}
+<div class="alert alert--warning mb-md">
+  Tracking is currently <strong>disabled</strong> for this domain. Toggle the switch above to resume log parsing.
+</div>
+{% endif %}
+
+<!-- KPI Metric Cards -->
+<div class="analytics-kpi-grid">
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">Requests</span>
+    <span class="analytics-kpi-val">{{ "{:,}".format(stats.totals.requests) }}</span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">Unique Visitors</span>
+    <span class="analytics-kpi-val">{{ "{:,}".format(stats.totals.unique_ips) }}</span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">Bandwidth</span>
+    <span class="analytics-kpi-val">{{ "%.2f" | format(stats.totals.bandwidth_bytes / (1024*1024)) }} <span class="analytics-kpi-sub">MB</span></span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">Avg Response Time</span>
+    <span class="analytics-kpi-val">{{ stats.totals.avg_response_time_ms }} <span class="analytics-kpi-sub">ms</span></span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">4xx Errors</span>
+    <span class="analytics-kpi-val text-warning">{{ "{:,}".format(stats.totals.status_4xx) }}</span>
+  </div>
+  <div class="analytics-kpi-card">
+    <span class="analytics-kpi-label">5xx Crashes</span>
+    <span class="analytics-kpi-val text-danger">{{ "{:,}".format(stats.totals.status_5xx) }}</span>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="analytics-charts-grid">
+  <div class="analytics-chart-box">
+    <div class="analytics-chart-header">
+      <h4>Traffic Timeline</h4>
+    </div>
+    <div class="analytics-canvas-wrap">
+      <canvas id="trafficChart"></canvas>
+    </div>
+  </div>
+
+  <div class="analytics-chart-box">
+    <div class="analytics-chart-header">
+      <h4>HTTP Status Codes</h4>
+    </div>
+    <div class="analytics-canvas-wrap">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Tables Grid -->
+<div class="analytics-tables-grid">
+  <!-- Top Paths -->
+  <div class="analytics-card">
+    <div class="analytics-card-header">
+      <h4 class="analytics-card-title">Top Pages / Endpoints</h4>
+    </div>
+    <table class="table analytics-table">
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th style="text-align: right;">Hits</th>
+          <th style="text-align: right;">Bandwidth</th>
+          <th style="text-align: right;">Avg Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in stats.top_paths %}
+        <tr>
+          <td class="analytics-path-cell" title="{{ p.path }}"><code>{{ p.path }}</code></td>
+          <td style="text-align: right;">{{ "{:,}".format(p.total_hits) }}</td>
+          <td style="text-align: right;">{{ "%.1f" | format(p.total_bytes / 1024) }} KB</td>
+          <td style="text-align: right;">{{ "%.0f" | format(p.avg_time) }} ms</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted">No page hits recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Top Referrers -->
+  <div class="analytics-card">
+    <div class="analytics-card-header">
+      <h4 class="analytics-card-title">Top Referrers</h4>
+    </div>
+    <table class="table analytics-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th style="text-align: right;">Hits</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in stats.top_referrers %}
+        <tr>
+          <td class="analytics-path-cell" title="{{ r.referrer }}">{{ r.referrer }}</td>
+          <td style="text-align: right;">{{ "{:,}".format(r.total_hits) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="2" class="text-center text-muted">No referrer data recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Optional GeoIP Section (Rendered dynamically if GeoIP active) -->
+{% if stats.geoip_enabled %}
+<div class="analytics-card mt-md">
+  <div class="analytics-card-header">
+    <h4 class="analytics-card-title">Geographic Locations (GeoIP)</h4>
+  </div>
+  <table class="table analytics-table">
+    <thead>
+      <tr>
+        <th>Country</th>
+        <th>City</th>
+        <th style="text-align: right;">Requests</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in stats.geo_stats %}
+      <tr>
+        <td><strong>{{ g.country_name }}</strong> <span class="badge badge--muted">{{ g.country_code }}</span></td>
+        <td>{{ g.city_name or "—" }}</td>
+        <td style="text-align: right;">{{ "{:,}".format(g.total_hits) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="text-center text-muted">No geographic data logged yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Recent Error Logs -->
+<div class="analytics-card mt-md">
+  <div class="analytics-card-header">
+    <h4 class="analytics-card-title">Recent 4xx / 5xx Errors</h4>
+  </div>
+  <table class="table analytics-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Status</th>
+        <th>Path</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in stats.recent_errors %}
+      <tr>
+        <td class="text-muted" style="font-size: 13px;">{{ e.timestamp }}</td>
+        <td>
+          {% if e.status_code >= 500 %}
+            <span class="badge badge--danger">{{ e.status_code }}</span>
+          {% else %}
+            <span class="badge badge--warning">{{ e.status_code }}</span>
+          {% endif %}
+        </td>
+        <td class="analytics-path-cell"><code>{{ e.path }}</code></td>
+        <td class="text-muted">{{ e.ip }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-center text-muted">No error logs recorded. Site is healthy!</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const DOMAIN_NAME = "{{ domain_name }}";
+const TIMELINE_DATA = {{ stats.timeline | tojson }};
+const STATUS_TOTALS = {
+  "2xx": {{ stats.totals.status_2xx }},
+  "3xx": {{ stats.totals.status_3xx }},
+  "4xx": {{ stats.totals.status_4xx }},
+  "5xx": {{ stats.totals.status_5xx }}
+};
+</script>
+<script src="/plugins/domain_analytics/static/js/analytics.js"></script>
+{% endblock %}

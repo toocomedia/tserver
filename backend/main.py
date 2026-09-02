@@ -99,6 +99,12 @@ async def lifespan(app: FastAPI):
     ssl_renew_task = asyncio.create_task(ssl_auto_renew.run_scheduler())
     plugin_reconcile_task = asyncio.create_task(plugin_manager.reconcile_plugins())
     resource_guard_task = asyncio.create_task(resource_guard_service.monitor())
+    try:
+        from plugins.domain_analytics.service import domain_analytics_service
+        analytics_task = asyncio.create_task(domain_analytics_service.run_worker_loop())
+    except Exception as exc:
+        logger.warning("Domain analytics worker task init failed: %s", exc)
+        analytics_task = None
     logger.info("Panel ready.")
     yield
     purge_task.cancel()
@@ -106,6 +112,8 @@ async def lifespan(app: FastAPI):
     ssl_renew_task.cancel()
     plugin_reconcile_task.cancel()
     resource_guard_task.cancel()
+    if analytics_task is not None:
+        analytics_task.cancel()
     logger.info("Panel shutting down.")
 
 

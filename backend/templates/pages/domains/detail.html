@@ -22,6 +22,7 @@
     {% else %}
       <a href="/dns/" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-dns">{{ _('dns') }}</a>
     {% endif %}
+    <a href="/plugins/domain_analytics/domain/{{ domain.name }}" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-analytics">Analytics</a>
     {% if not cert %}
       {% if nginx_active %}
       <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary" style="height: 38px; padding: 0 16px;" id="btn-issue-ssl">

@@ -1,0 +1,17 @@
+{
+  "id": "domain_analytics",
+  "name": "Domain Analytics",
+  "description": "Zero-latency domain traffic, performance, error tracking, and optional GeoIP insights from Nginx access logs.",
+  "version": "1.0.0",
+  "author": "SRV Panel Core",
+  "icon": "activity",
+  "route_prefix": "/plugins/domain_analytics",
+  "sidebar": true,
+  "sidebar_label": "Analytics",
+  "enabled": true,
+  "route_dependency_checks": false,
+  "usage": {},
+  "requires": {
+    "dependencies": []
+  }
+}
