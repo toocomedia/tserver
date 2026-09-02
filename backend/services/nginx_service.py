@@ -207,6 +207,7 @@ async def create_php_site(
     domain: str, document_root: str, socket_path: str, access_log: str, error_log: str,
     *, include_www: bool = False,
 ) -> str:
+    ensure_domain_logs_dir()
     return await _write_validated_site(
         domain,
         nginx_templates.php_site_config(
@@ -220,6 +221,7 @@ async def update_php_site_ssl(
     domain: str, document_root: str, socket_path: str, access_log: str, error_log: str,
     cert_path: str, key_path: str, *, include_www: bool = False,
 ) -> str:
+    ensure_domain_logs_dir()
     return await _write_validated_site(
         domain,
         nginx_templates.php_site_ssl_config(
@@ -275,6 +277,7 @@ async def create_proxy(
     cache_ttl_minutes: int = 10,
 ) -> str:
     """Write HTTP reverse proxy nginx config. Returns config path."""
+    ensure_domain_logs_dir()
     await ensure_http_maps()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_config(
@@ -305,6 +308,7 @@ async def update_proxy_ssl(
     cache_ttl_minutes: int = 10,
 ) -> str:
     """Replace proxy HTTP config with SSL config."""
+    ensure_domain_logs_dir()
     await ensure_http_maps()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_ssl_config(
