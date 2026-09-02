@@ -18,6 +18,7 @@
       <a href="?days=30" class="btn btn--sm {% if selected_days == 30 %}btn--primary{% else %}btn--secondary{% endif %}">30d</a>
     </div>
     <button type="button" class="btn btn--sm btn--secondary" onclick="syncDomainNow()" id="btn-sync-logs" title="Immediately re-scan log file">Sync Logs</button>
+    <button type="button" class="btn btn--sm btn--danger" onclick="clearDomainData()" id="btn-clear-data" title="Permanently delete all analytics for this domain">Clear Data</button>
     <label class="analytics-toggle" title="Enable/Disable tracking">
       <input type="checkbox" {% if stats.is_active %}checked{% endif %} onchange="toggleCurrentDomain(this.checked)">
       <span class="analytics-toggle-slider"></span>

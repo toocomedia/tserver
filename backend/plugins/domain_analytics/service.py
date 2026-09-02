@@ -84,6 +84,12 @@ class DomainAnalyticsService:
 
         return str(candidates[0])
 
+    def clear_domain_data(self, domain_name: str) -> None:
+        """Wipe all historical stats and reset tracking offsets for a domain."""
+        with get_db() as conn:
+            conn.execute("DELETE FROM hourly_stats WHERE domain_name = ?", (domain_name,))
+            conn.execute("UPDATE tracked_domains SET last_offset = 0, last_inode = 0, log_path = '' WHERE domain_name = ?", (domain_name,))
+
     def process_domain_log(self, domain_name: str, from_beginning: bool = False) -> dict:
         """Process logs for a specific domain immediately and return diagnostics."""
         with get_db() as conn:

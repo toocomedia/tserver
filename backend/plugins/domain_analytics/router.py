@@ -67,6 +67,13 @@ async def api_sync_domain_logs(domain_name: str):
     return domain_analytics_service.process_domain_log(domain_name)
 
 
+@router.post("/api/domain/{domain_name}/clear", response_class=JSONResponse)
+async def api_clear_domain_data(domain_name: str):
+    """Clear all historical analytics data for a domain."""
+    domain_analytics_service.clear_domain_data(domain_name)
+    return {"domain_name": domain_name, "status": "success"}
+
+
 @router.post("/api/domain/{domain_name}/toggle", response_class=JSONResponse)
 async def api_toggle_domain(domain_name: str, payload: dict):
     """Toggle domain analytics tracking ON/OFF."""

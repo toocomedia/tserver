@@ -158,3 +158,29 @@ async function syncDomainNow() {
     }
   }
 }
+
+async function clearDomainData() {
+  if (!confirm('Are you sure you want to permanently delete all historical analytics data for this domain? This cannot be undone.')) {
+    return;
+  }
+  const btn = document.getElementById('btn-clear-data');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Clearing...';
+  }
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const res = await fetch(`/plugins/domain_analytics/api/domain/${encodeURIComponent(DOMAIN_NAME)}/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }
+    });
+    if (!res.ok) throw new Error('Failed to clear data');
+    window.location.reload();
+  } catch (err) {
+    alert('Error clearing data: ' + err.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Clear Data';
+    }
+  }
+}
