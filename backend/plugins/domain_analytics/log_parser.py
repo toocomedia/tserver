@@ -79,8 +79,18 @@ def parse_line(line: str) -> LogEntry | None:
         path = d["path"]
         clean_path = path.split("?")[0] if len(path) > 120 else path
 
+        raw_ip = d["ip"]
+        if "," in raw_ip:
+            raw_ip = raw_ip.split(",")[0].strip()
+            
+        clean_ip = raw_ip
+        if raw_ip.count(":") == 1:
+            clean_ip = raw_ip.split(":")[0]
+        elif raw_ip.startswith("[") and "]:" in raw_ip:
+            clean_ip = raw_ip.split("]:")[0][1:]
+
         return LogEntry(
-            ip=d["ip"],
+            ip=clean_ip,
             timestamp=parse_nginx_timestamp(d["time"]),
             method=d["method"].upper(),
             path=clean_path,

@@ -46,6 +46,9 @@ class DomainAnalyticsService:
 
     def resolve_domain_log_path(self, domain_name: str) -> str:
         """Find the appropriate Nginx access log path for the domain across standard and custom /opt paths."""
+        domain_safe = domain_name.replace(":", "_")
+        domain_no_port = domain_name.split(":")[0]
+
         log_dirs = [
             Path(getattr(config, "NGINX_LOG_DIR", "/var/log/nginx")),
             Path("/var/log/nginx"),
@@ -56,12 +59,20 @@ class DomainAnalyticsService:
 
         candidates = []
         for ldir in log_dirs:
-            candidates.append(ldir / "domains" / f"{domain_name}.access.log")
-            candidates.append(ldir / f"{domain_name}.access.log")
-            candidates.append(ldir / f"{domain_name}-access.log")
+            candidates.append(ldir / "domains" / f"{domain_safe}.access.log")
+            candidates.append(ldir / f"{domain_safe}.access.log")
+            candidates.append(ldir / f"{domain_safe}-access.log")
+            
+            if domain_safe != domain_no_port:
+                candidates.append(ldir / "domains" / f"{domain_no_port}.access.log")
+                candidates.append(ldir / f"{domain_no_port}.access.log")
+                candidates.append(ldir / f"{domain_no_port}-access.log")
 
-        candidates.append(Path(config.NGINX_WEBROOT) / domain_name / "logs" / "access.log")
-        candidates.append(Path(config.NGINX_WEBROOT) / domain_name / "access.log")
+        candidates.append(Path(config.NGINX_WEBROOT) / domain_safe / "logs" / "access.log")
+        candidates.append(Path(config.NGINX_WEBROOT) / domain_safe / "access.log")
+        if domain_safe != domain_no_port:
+            candidates.append(Path(config.NGINX_WEBROOT) / domain_no_port / "logs" / "access.log")
+            candidates.append(Path(config.NGINX_WEBROOT) / domain_no_port / "access.log")
 
         php_root = Path(config.PHP_SITE_LOG_ROOT)
         if php_root.exists():
@@ -165,10 +176,20 @@ class DomainAnalyticsService:
         day_ago = (now - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
 
         with get_db() as conn:
-            domains = conn.execute("SELECT domain_name, is_active, last_parsed_at FROM tracked_domains ORDER BY is_active DESC, domain_name ASC").fetchall()
+            domains = conn.execute("SELECT domain_name, is_active, last_parsed_at, log_path FROM tracked_domains ORDER BY is_active DESC, domain_name ASC").fetchall()
             results = []
             for d in domains:
                 dname = d["domain_name"]
+                
+                saved_path_str = d["log_path"]
+                if saved_path_str:
+                    log_path = Path(saved_path_str)
+                    if not log_path.exists():
+                        log_path = Path(self.resolve_domain_log_path(dname))
+                else:
+                    log_path = Path(self.resolve_domain_log_path(dname))
+                log_exists = log_path.exists()
+
                 stats = conn.execute("""
                     SELECT 
                         SUM(total_requests) as requests,
@@ -193,6 +214,8 @@ class DomainAnalyticsService:
                     "bandwidth_bytes_24h": stats["bytes"] or 0,
                     "error_rate_24h": error_rate,
                     "avg_response_time_ms": round(stats["avg_time"] or 0.0, 1),
+                    "diagnostic_log_path": str(log_path),
+                    "diagnostic_log_exists": log_exists,
                 })
             return results
 
@@ -209,7 +232,18 @@ class DomainAnalyticsService:
             if not domain_info:
                 # Ensure domain entry exists
                 self.toggle_domain(domain_name, is_active=False)
-                domain_info = {"domain_name": domain_name, "is_active": 0}
+                domain_info = {"domain_name": domain_name, "is_active": 0, "log_path": ""}
+
+            saved_path_str = domain_info.get("log_path")
+            if saved_path_str:
+                log_path = Path(saved_path_str)
+                if not log_path.exists():
+                    log_path = Path(self.resolve_domain_log_path(domain_name))
+            else:
+                log_path = Path(self.resolve_domain_log_path(domain_name))
+
+            log_exists = log_path.exists()
+            log_size = log_path.stat().st_size if log_exists else 0
 
             # Hourly timeline
             hourly_rows = conn.execute("""
@@ -274,6 +308,11 @@ class DomainAnalyticsService:
                 "domain_name": domain_name,
                 "is_active": bool(domain_info["is_active"]),
                 "days": days,
+                "diagnostics": {
+                    "log_path": str(log_path),
+                    "file_exists": log_exists,
+                    "file_size_bytes": log_size,
+                },
                 "totals": {
                     "requests": totals["requests"] or 0,
                     "unique_ips": totals["ips"] or 0,
@@ -302,7 +341,15 @@ class DomainAnalyticsService:
 
         for d in domains:
             domain_name = d["domain_name"]
-            log_path = Path(d["log_path"] or self.resolve_domain_log_path(domain_name))
+            
+            saved_path_str = d["log_path"]
+            if saved_path_str:
+                log_path = Path(saved_path_str)
+                if not log_path.exists():
+                    log_path = Path(self.resolve_domain_log_path(domain_name))
+            else:
+                log_path = Path(self.resolve_domain_log_path(domain_name))
+
             if not log_path.exists():
                 continue
 
