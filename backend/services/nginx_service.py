@@ -55,13 +55,12 @@ def ensure_acme_root() -> None:
     logger.info("Acme root ensured: %s", path)
 
 
-def ensure_domain_logs_dir() -> Path:
+async def ensure_domain_logs_dir() -> Path:
     """Create /var/log/nginx/domains for per-domain access and error logs."""
     path = Path("/var/log/nginx/domains")
-    try:
-        path.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        pass
+    r = await shell.run(["mkdir", "-p", str(path)], timeout=10)
+    if not r.success:
+        logger.warning("Failed to create domain logs dir: %s", r.stderr)
     return path
 
 
@@ -146,7 +145,7 @@ async def create_static_site(domain: str) -> str:
     Write HTTP static site nginx config.
     Returns path to config file. Raises on nginx -t failure.
     """
-    ensure_domain_logs_dir()
+    await ensure_domain_logs_dir()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_config(domain, webroot)
@@ -167,7 +166,7 @@ async def update_static_site_ssl(
     Replace HTTP config with HTTP+HTTPS config after SSL cert is issued.
     Returns new config path.
     """
-    ensure_domain_logs_dir()
+    await ensure_domain_logs_dir()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_ssl_config(domain, webroot, cert_path, key_path)
@@ -207,7 +206,7 @@ async def create_php_site(
     domain: str, document_root: str, socket_path: str, access_log: str, error_log: str,
     *, include_www: bool = False,
 ) -> str:
-    ensure_domain_logs_dir()
+    await ensure_domain_logs_dir()
     return await _write_validated_site(
         domain,
         nginx_templates.php_site_config(
@@ -221,7 +220,7 @@ async def update_php_site_ssl(
     domain: str, document_root: str, socket_path: str, access_log: str, error_log: str,
     cert_path: str, key_path: str, *, include_www: bool = False,
 ) -> str:
-    ensure_domain_logs_dir()
+    await ensure_domain_logs_dir()
     return await _write_validated_site(
         domain,
         nginx_templates.php_site_ssl_config(
@@ -277,7 +276,7 @@ async def create_proxy(
     cache_ttl_minutes: int = 10,
 ) -> str:
     """Write HTTP reverse proxy nginx config. Returns config path."""
-    ensure_domain_logs_dir()
+    await ensure_domain_logs_dir()
     await ensure_http_maps()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_config(
@@ -308,7 +307,7 @@ async def update_proxy_ssl(
     cache_ttl_minutes: int = 10,
 ) -> str:
     """Replace proxy HTTP config with SSL config."""
-    ensure_domain_logs_dir()
+    await ensure_domain_logs_dir()
     await ensure_http_maps()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_ssl_config(
