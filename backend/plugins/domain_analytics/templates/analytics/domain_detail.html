@@ -149,7 +149,7 @@
 </div>
 
 <!-- Optional GeoIP Section (Rendered dynamically if GeoIP active) -->
-{% if stats.geoip_enabled %}
+{% if stats.geoip_enabled or stats.geo_stats %}
 <div class="analytics-card mt-md">
   <div class="analytics-card-header">
     <h4 class="analytics-card-title">Geographic Locations (GeoIP)</h4>

@@ -17,8 +17,8 @@ from plugins.domain_analytics.db import DATA_DIR, get_db
 logger = logging.getLogger(__name__)
 
 MMDB_URLS = {
-    "country": "https://git.io/GeoLite2-Country.mmdb",
-    "city": "https://git.io/GeoLite2-City.mmdb",
+    "country": "https://raw.githubusercontent.com/P3TERX/GeoLite.mmdb/download/GeoLite2-Country.mmdb",
+    "city": "https://raw.githubusercontent.com/P3TERX/GeoLite.mmdb/download/GeoLite2-City.mmdb",
 }
 
 DEFAULT_MMDB_PATH = DATA_DIR / "GeoLite2.mmdb"
@@ -40,7 +40,9 @@ class GeoIPService:
     def is_enabled(self) -> bool:
         with get_db() as conn:
             row = conn.execute("SELECT value FROM settings WHERE key = 'geoip_enabled'").fetchone()
-            return bool(row and row["value"] == "1")
+            if row is not None:
+                return row["value"] == "1"
+            return self.is_installed()
 
     def set_enabled(self, enabled: bool) -> None:
         with get_db() as conn:
@@ -110,7 +112,8 @@ class GeoIPService:
             temp_path.replace(target_path)
             self._load_reader()
 
-            # Save settings
+            # Save settings and enable
+            self.set_enabled(True)
             with get_db() as conn:
                 conn.execute(
                     "INSERT INTO settings (key, value) VALUES ('geoip_db_type', ?) "
@@ -124,7 +127,7 @@ class GeoIPService:
                         (custom_url,),
                     )
 
-            return True, "GeoIP database downloaded successfully."
+            return True, "GeoIP database downloaded and activated successfully."
         except Exception as exc:
             temp_path.unlink(missing_ok=True)
             logger.error("GeoIP download failed: %s", exc)
@@ -144,8 +147,17 @@ class GeoIPService:
 
     def lookup(self, ip: str) -> Optional[GeoLocation]:
         """Lookup country code, country name, and city name for an IP address."""
-        if not self._reader or not ip or ip in ("127.0.0.1", "::1", "localhost"):
+        if not self._reader or not ip:
             return None
+
+        # Handle local / private LAN IPs gracefully for local testing
+        if ip in ("127.0.0.1", "::1", "localhost") or ip.startswith(("192.168.", "10.", "172.16.", "172.17.", "172.18.", "172.19.", "172.2", "172.3")):
+            return GeoLocation(
+                country_code="LOCAL",
+                country_name="Local Network / LAN",
+                city_name="Internal",
+            )
+
         try:
             record = self._reader.get(ip)
             if not record or not isinstance(record, dict):

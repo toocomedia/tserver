@@ -81,14 +81,14 @@ class DomainAnalyticsService:
 
         return str(candidates[0])
 
-    def process_domain_log(self, domain_name: str) -> dict:
+    def process_domain_log(self, domain_name: str, from_beginning: bool = False) -> dict:
         """Process logs for a specific domain immediately and return diagnostics."""
         log_path_str = self.resolve_domain_log_path(domain_name)
         log_path = Path(log_path_str)
 
         with get_db() as conn:
             d = conn.execute("SELECT * FROM tracked_domains WHERE domain_name = ?", (domain_name,)).fetchone()
-            last_offset = d["last_offset"] if d else 0
+            last_offset = 0 if from_beginning else (d["last_offset"] if d else 0)
             last_inode = d["last_inode"] if d else 0
 
         if not log_path.exists() or not log_path.is_file():
