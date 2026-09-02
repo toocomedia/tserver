@@ -74,13 +74,6 @@ class DomainAnalyticsService:
             candidates.append(Path(config.NGINX_WEBROOT) / domain_no_port / "logs" / "access.log")
             candidates.append(Path(config.NGINX_WEBROOT) / domain_no_port / "access.log")
 
-        php_root = Path(config.PHP_SITE_LOG_ROOT)
-        if php_root.exists():
-            for p in php_root.iterdir():
-                acc = p / "access.log"
-                if acc.exists():
-                    candidates.append(acc)
-
         for c in candidates:
             if c.exists() and c.is_file():
                 return str(c)
