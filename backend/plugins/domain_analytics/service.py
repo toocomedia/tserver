@@ -45,18 +45,90 @@ class DomainAnalyticsService:
         }
 
     def resolve_domain_log_path(self, domain_name: str) -> str:
-        """Find the appropriate Nginx access log path for the domain."""
-        custom_domain_log = Path(f"/var/log/nginx/domains/{domain_name}.access.log")
-        if custom_domain_log.exists():
-            return str(custom_domain_log)
+        """Find the appropriate Nginx access log path for the domain across standard and custom /opt paths."""
+        log_dirs = [
+            Path(getattr(config, "NGINX_LOG_DIR", "/var/log/nginx")),
+            Path("/var/log/nginx"),
+            Path("/opt/nginx/logs"),
+            Path("/opt/openresty/nginx/logs"),
+            Path("/usr/local/nginx/logs"),
+        ]
 
-        # Standard vhost / webroot log check
-        candidate = Path(config.NGINX_WEBROOT) / domain_name / "logs" / "access.log"
-        if candidate.exists():
-            return str(candidate)
+        candidates = []
+        for ldir in log_dirs:
+            candidates.append(ldir / "domains" / f"{domain_name}.access.log")
+            candidates.append(ldir / f"{domain_name}.access.log")
+            candidates.append(ldir / f"{domain_name}-access.log")
 
-        # Global Nginx access log fallback
-        return "/var/log/nginx/access.log"
+        candidates.append(Path(config.NGINX_WEBROOT) / domain_name / "logs" / "access.log")
+        candidates.append(Path(config.NGINX_WEBROOT) / domain_name / "access.log")
+
+        php_root = Path(config.PHP_SITE_LOG_ROOT)
+        if php_root.exists():
+            for p in php_root.iterdir():
+                acc = p / "access.log"
+                if acc.exists():
+                    candidates.append(acc)
+
+        for c in candidates:
+            if c.exists() and c.is_file():
+                return str(c)
+
+        for ldir in log_dirs:
+            fallback = ldir / "access.log"
+            if fallback.exists():
+                return str(fallback)
+
+        return str(candidates[0])
+
+    def process_domain_log(self, domain_name: str) -> dict:
+        """Process logs for a specific domain immediately and return diagnostics."""
+        log_path_str = self.resolve_domain_log_path(domain_name)
+        log_path = Path(log_path_str)
+
+        with get_db() as conn:
+            d = conn.execute("SELECT * FROM tracked_domains WHERE domain_name = ?", (domain_name,)).fetchone()
+            last_offset = d["last_offset"] if d else 0
+            last_inode = d["last_inode"] if d else 0
+
+        if not log_path.exists() or not log_path.is_file():
+            return {
+                "success": False,
+                "log_path": str(log_path),
+                "file_exists": False,
+                "processed_lines": 0,
+                "message": f"Log file not found at {log_path}",
+            }
+
+        entries, new_offset, new_inode = parse_log_file(
+            log_path,
+            last_offset=last_offset,
+            last_inode=last_inode,
+        )
+
+        if entries:
+            process_domain_entries(domain_name, entries)
+
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO tracked_domains (domain_name, is_active, log_path, last_offset, last_inode, last_parsed_at)
+                VALUES (?, 1, ?, ?, ?, ?)
+                ON CONFLICT(domain_name) DO UPDATE SET
+                    log_path = excluded.log_path,
+                    last_offset = excluded.last_offset,
+                    last_inode = excluded.last_inode,
+                    last_parsed_at = excluded.last_parsed_at;
+            """, (domain_name, str(log_path), new_offset, new_inode, now_str))
+
+        return {
+            "success": True,
+            "log_path": str(log_path),
+            "file_exists": True,
+            "file_size_bytes": log_path.stat().st_size if log_path.exists() else 0,
+            "processed_lines": len(entries),
+            "message": f"Successfully parsed {len(entries)} lines from {log_path.name}",
+        }
 
     def sync_domains_from_panel(self, panel_domains: List[str]) -> None:
         """Synchronize known domains into tracked_domains table."""

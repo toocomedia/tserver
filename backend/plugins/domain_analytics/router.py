@@ -42,8 +42,9 @@ async def analytics_index(request: Request, db: AsyncSession = Depends(get_panel
 @router.get("/domain/{domain_name}", response_class=HTMLResponse)
 async def analytics_domain_view(request: Request, domain_name: str, days: int = 7):
     """Detailed analytics view for a single domain."""
-    domain_analytics_service.process_all_active_domains()
+    sync_result = domain_analytics_service.process_domain_log(domain_name)
     stats = domain_analytics_service.get_domain_detail(domain_name, days=days)
+    stats["sync_result"] = sync_result
     return templates.TemplateResponse("analytics/domain_detail.html", {
         "request": request,
         "active_page": "domain_analytics",
@@ -56,8 +57,14 @@ async def analytics_domain_view(request: Request, domain_name: str, days: int = 
 @router.get("/api/domain/{domain_name}/stats", response_class=JSONResponse)
 async def api_domain_stats(domain_name: str, days: int = 7):
     """JSON API endpoint for dynamic charts."""
-    domain_analytics_service.process_all_active_domains()
+    domain_analytics_service.process_domain_log(domain_name)
     return domain_analytics_service.get_domain_detail(domain_name, days=days)
+
+
+@router.post("/api/domain/{domain_name}/sync", response_class=JSONResponse)
+async def api_sync_domain_logs(domain_name: str):
+    """Manual sync trigger for domain logs."""
+    return domain_analytics_service.process_domain_log(domain_name)
 
 
 @router.post("/api/domain/{domain_name}/toggle", response_class=JSONResponse)
@@ -65,9 +72,8 @@ async def api_toggle_domain(domain_name: str, payload: dict):
     """Toggle domain analytics tracking ON/OFF."""
     is_active = bool(payload.get("is_active", False))
     domain_analytics_service.toggle_domain(domain_name, is_active=is_active)
-    # Trigger immediate log processing if turning ON
     if is_active:
-        domain_analytics_service.process_all_active_domains()
+        domain_analytics_service.process_domain_log(domain_name)
     return {"domain_name": domain_name, "is_active": is_active, "status": "success"}
 
 

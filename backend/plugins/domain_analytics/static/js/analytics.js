@@ -131,3 +131,30 @@ async function toggleCurrentDomain(isActive) {
     alert('Error updating tracking status: ' + err.message);
   }
 }
+
+async function syncDomainNow() {
+  const btn = document.getElementById('btn-sync-logs');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+  }
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const res = await fetch(`/plugins/domain_analytics/api/domain/${encodeURIComponent(DOMAIN_NAME)}/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }
+    });
+    const data = await res.json();
+    if (data.message) {
+      window.location.reload();
+    } else {
+      window.location.reload();
+    }
+  } catch (err) {
+    alert('Sync error: ' + err.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Sync Logs';
+    }
+  }
+}

@@ -17,11 +17,23 @@
       <a href="?days=7" class="btn btn--sm {% if selected_days == 7 %}btn--primary{% else %}btn--secondary{% endif %}">7d</a>
       <a href="?days=30" class="btn btn--sm {% if selected_days == 30 %}btn--primary{% else %}btn--secondary{% endif %}">30d</a>
     </div>
+    <button type="button" class="btn btn--sm btn--secondary" onclick="syncDomainNow()" id="btn-sync-logs" title="Immediately re-scan log file">Sync Logs</button>
     <label class="analytics-toggle" title="Enable/Disable tracking">
       <input type="checkbox" {% if stats.is_active %}checked{% endif %} onchange="toggleCurrentDomain(this.checked)">
       <span class="analytics-toggle-slider"></span>
     </label>
   </div>
+</div>
+
+<div class="analytics-info-bar mb-md">
+  <span class="text-muted" style="font-size: 13px;">Log Source: <code>{{ stats.sync_result.log_path if stats.sync_result else 'Auto-detecting' }}</code></span>
+  <span>
+    {% if stats.sync_result and stats.sync_result.file_exists %}
+      <span class="badge badge--success">Log Connected ({{ "%.1f" | format(stats.sync_result.file_size_bytes / 1024) }} KB)</span>
+    {% else %}
+      <span class="badge badge--muted">Waiting for traffic</span>
+    {% endif %}
+  </span>
 </div>
 
 {% if not stats.is_active %}

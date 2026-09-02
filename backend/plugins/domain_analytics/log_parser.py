@@ -19,11 +19,16 @@ logger = logging.getLogger(__name__)
 LOG_PATTERN = re.compile(
     r'^(?P<ip>\S+)\s+\S+\s+(?P<user>\S+)\s+\[(?P<time>[^\]]+)\]\s+'
     r'"(?P<method>\S+)\s+(?P<path>[^\s"]+)(?:\s+[^\s"]+)?"\s+'
-    r'(?P<status>\d{3})\s+(?P<bytes>\d+)'
+    r'(?P<status>\d{3})\s+(?P<bytes>[\d\-]+)'
     r'(?:\s+"(?P<referer>[^"]*)")?'
     r'(?:\s+"(?P<agent>[^"]*)")?'
     r'(?:.*?\brt=(?P<rt>[\d\.]+))?'
     r'(?:.*?\burt=(?P<urt>[\d\.\-]+))?',
+    re.ASCII
+)
+
+FALLBACK_LOG_PATTERN = re.compile(
+    r'^(?P<ip>\S+)\s+.*?\[(?P<time>[^\]]+)\]\s+"(?P<method>[A-Za-z]+)\s+(?P<path>[^\s"]+).*?"\s+(?P<status>\d{3})\s+(?P<bytes>[\d\-]+)',
     re.ASCII
 )
 
@@ -48,14 +53,20 @@ def parse_nginx_timestamp(raw_time: str) -> str:
 
 def parse_line(line: str) -> LogEntry | None:
     """Parse a single Nginx log line into a LogEntry dataclass."""
+    line = line.strip()
+    if not line:
+        return None
     match = LOG_PATTERN.match(line)
     if not match:
-        return None
+        match = FALLBACK_LOG_PATTERN.match(line)
+        if not match:
+            return None
     d = match.groupdict()
 
     try:
         status = int(d["status"])
-        bytes_sent = int(d["bytes"])
+        raw_bytes = d.get("bytes") or "0"
+        bytes_sent = int(raw_bytes) if raw_bytes.isdigit() else 0
         req_time = float(d["rt"]) if d.get("rt") else 0.0
         
         urt_raw = d.get("urt")
@@ -66,7 +77,6 @@ def parse_line(line: str) -> LogEntry | None:
             referer = ""
         
         path = d["path"]
-        # Strip query parameters for aggregated route metrics if very long
         clean_path = path.split("?")[0] if len(path) > 120 else path
 
         return LogEntry(
