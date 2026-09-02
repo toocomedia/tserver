@@ -425,6 +425,9 @@ server {{
     listen [::]:80;
     server_name {full_domain};
 
+    access_log /var/log/nginx/domains/{full_domain}.access.log;
+    error_log /var/log/nginx/domains/{full_domain}.error.log;
+
     # Certbot HTTP-01 challenge
     location /.well-known/acme-challenge/ {{
         root {config.NGINX_WEBROOT}/acme-challenge;
@@ -472,6 +475,9 @@ server {{
     listen [::]:80;
     server_name {full_domain};
 
+    access_log /var/log/nginx/domains/{full_domain}.access.log;
+    error_log /var/log/nginx/domains/{full_domain}.error.log;
+
     location /.well-known/acme-challenge/ {{
         root {config.NGINX_WEBROOT}/acme-challenge;
         try_files $uri =404;
@@ -487,6 +493,9 @@ server {{
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name {full_domain};
+
+    access_log /var/log/nginx/domains/{full_domain}.access.log;
+    error_log /var/log/nginx/domains/{full_domain}.error.log;
 
     ssl_certificate     {cert_path};
     ssl_certificate_key {key_path};
