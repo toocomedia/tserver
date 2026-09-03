@@ -231,105 +231,15 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('dns-records-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dns-records-skeleton');
-
-  const bulkDeleteBtn = document.getElementById('btn-bulk-delete-dns');
-  const countSpan = document.getElementById('dns-bulk-count');
-  const selectAll = document.getElementById('bulk-select-all');
-  const itemCbs = () => Array.from(document.querySelectorAll('.bulk-select-item'));
-
-  function updateDnsBulk() {
-    const checked = itemCbs().filter(c => c.checked);
-    if (bulkDeleteBtn) {
-      if (checked.length > 0) {
-        bulkDeleteBtn.style.display = 'inline-flex';
-        bulkDeleteBtn.disabled = false;
-        if (countSpan) countSpan.textContent = `(${checked.length})`;
-      } else {
-        bulkDeleteBtn.style.display = 'none';
-        bulkDeleteBtn.disabled = true;
-      }
-    }
-    if (selectAll) {
-      const all = itemCbs();
-      selectAll.checked = all.length > 0 && checked.length === all.length;
-      selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
-    }
-  }
-
-  if (selectAll) {
-    selectAll.addEventListener('change', (e) => {
-      itemCbs().forEach(c => c.checked = e.target.checked);
-      updateDnsBulk();
-    });
-  }
-
-  document.getElementById('records-table')?.addEventListener('change', (e) => {
-    if (e.target && e.target.matches('.bulk-select-item')) {
-      updateDnsBulk();
-    }
-  });
-
-  if (bulkDeleteBtn) {
-    bulkDeleteBtn.addEventListener('click', () => {
-      const checked = itemCbs().filter(c => c.checked);
-      if (!checked.length) return;
-      const records = checked.map(c => ({
-        name: c.getAttribute('data-name'),
-        type: c.getAttribute('data-type'),
-        content: c.getAttribute('data-content')
-      }));
-
-      const executeDelete = async () => {
-        bulkDeleteBtn.disabled = true;
-        const origText = bulkDeleteBtn.textContent;
-        bulkDeleteBtn.textContent = 'Deleting...';
-        try {
-          const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('[name="csrf_token"]')?.value || '';
-          const res = await fetch(`/dns/${encodeURIComponent(CURRENT_DOMAIN)}/records/bulk-delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-            body: JSON.stringify({ records })
-          });
-          const data = await res.json().catch(() => ({}));
-          if (res.ok && data.success !== false) {
-            if (typeof window.toast === 'function') window.toast(data.message || 'Records deleted successfully', 'success');
-            window.location.reload();
-          } else {
-            alert(data.message || data.detail || 'Failed to delete records');
-            bulkDeleteBtn.disabled = false;
-            bulkDeleteBtn.textContent = origText;
-            updateDnsBulk();
-          }
-        } catch (err) {
-          alert('Error: ' + err.message);
-          bulkDeleteBtn.disabled = false;
-          bulkDeleteBtn.textContent = origText;
-          updateDnsBulk();
-        }
-      };
-
-      if (typeof window.confirmAction === 'function') {
-        window.confirmAction(
-          `Are you sure you want to permanently delete ${records.length} DNS record(s)?`,
-          executeDelete,
-          { danger: true, title: 'Bulk Delete DNS Records', okLabel: `Delete ${records.length} Records`, itemName: `${records.length} Records` }
-        );
-      } else if (confirm(`Delete ${records.length} records?`)) {
-        executeDelete();
-      }
-    });
-  }
 });
-
-// Pass context from server to JS
 const CURRENT_DOMAIN = "{{ domain.name }}";
 const SERVER_IP = "{{ server_ip }}";
 const CONTENT_LABELS = {{ content_labels | tojson }};
 </script>
+<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}"></script>
 {% endblock %}
 

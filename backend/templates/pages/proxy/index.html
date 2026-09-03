@@ -34,7 +34,9 @@
 
 {% if rows %}
 
-  {% set search_id = 'proxy-search-input' %}
+  {% set bulk_endpoint = '/proxy/api/bulk' %}
+  {% set bulk_table = 'proxy-table' %}
+  {% set bulk_item_name = 'Reverse Proxy' %}
   {% set search_placeholder = 'Search proxies by domain, target IP or port...' %}
   {% set filter_options = [
     {'val': 'ssl', 'label': _('ssl_enabled')},
@@ -202,55 +204,9 @@
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
 <script>
-let proxyBulkController = null;
-
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('proxy-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('proxy-skeleton');
-
-  if (typeof window.initBulkActionsTable === 'function') {
-    proxyBulkController = window.initBulkActionsTable({
-      tableId: 'proxy-table',
-      endpoint: '/proxy/api/bulk',
-      itemName: 'Reverse Proxy',
-      confirmDangerActions: ['delete']
-    });
-  }
-
-  const searchInput = document.getElementById('proxy-search-input');
-  const statusFilter = document.getElementById('status-filter-select') || document.getElementById('proxy-status-filter');
-  if (searchInput) searchInput.addEventListener('input', filterProxyTable);
-  if (statusFilter) statusFilter.addEventListener('change', filterProxyTable);
 });
-
-function filterProxyTable() {
-  const query = (document.getElementById('proxy-search-input')?.value || '').toLowerCase().trim();
-  const filter = (document.getElementById('status-filter-select') || document.getElementById('proxy-status-filter'))?.value || 'all';
-  const rows = document.querySelectorAll('#proxy-table tbody tr[data-proxy-id]');
-
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const matchesSearch = !query || text.includes(query);
-    
-    let matchesFilter = true;
-    if (filter === 'ssl') {
-      matchesFilter = row.innerText.includes('SSL');
-    } else if (filter === 'cache') {
-      matchesFilter = row.innerText.includes('ON');
-    }
-
-    if (matchesSearch && matchesFilter) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-      const cb = row.querySelector('.bulk-select-item');
-      if (cb) cb.checked = false;
-    }
-  });
-
-  if (proxyBulkController) {
-    proxyBulkController.updateState();
-  }
-}
 </script>
 {% endblock %}

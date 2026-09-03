@@ -306,6 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   bindDeleteButtons();
+  bindBulkDeleteRecords();
 
   // Deep-link: /dns/{domain}/records?add=1 opens modal
   const params = new URLSearchParams(window.location.search);
@@ -321,5 +322,90 @@ document.addEventListener("DOMContentLoaded", () => {
     if (el) setTimeout(() => el.remove(), 5000);
   });
 });
+
+function bindBulkDeleteRecords() {
+  const bulkBtn = document.getElementById("btn-bulk-delete-dns");
+  const countSpan = document.getElementById("dns-bulk-count");
+  const selectAll = document.getElementById("bulk-select-all");
+  const itemBoxes = () => Array.from(document.querySelectorAll(".bulk-select-item"));
+
+  function update() {
+    const checked = itemBoxes().filter(c => c.checked);
+    if (bulkBtn) {
+      bulkBtn.style.display = checked.length ? "inline-flex" : "none";
+      bulkBtn.disabled = !checked.length;
+      if (countSpan) countSpan.textContent = checked.length ? `(${checked.length})` : "";
+    }
+    if (selectAll) {
+      const all = itemBoxes();
+      selectAll.checked = all.length > 0 && checked.length === all.length;
+      selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener("change", (e) => {
+      itemBoxes().forEach(c => c.checked = e.target.checked);
+      update();
+    });
+  }
+
+  document.getElementById("records-table")?.addEventListener("change", (e) => {
+    if (e.target?.matches(".bulk-select-item")) update();
+  });
+
+  if (bulkBtn) {
+    bulkBtn.addEventListener("click", () => {
+      const checked = itemBoxes().filter(c => c.checked);
+      if (!checked.length) return;
+      const records = checked.map(c => ({
+        name: c.getAttribute("data-name"),
+        type: c.getAttribute("data-type"),
+        content: c.getAttribute("data-content")
+      }));
+      const domain = typeof CURRENT_DOMAIN !== "undefined" ? CURRENT_DOMAIN : "";
+
+      const executeDelete = async () => {
+        bulkBtn.disabled = true;
+        const prev = bulkBtn.textContent;
+        bulkBtn.textContent = "Deleting...";
+        try {
+          const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+                       document.querySelector('[name="csrf_token"]')?.value || "";
+          const res = await fetch(`/dns/${encodeURIComponent(domain)}/records/bulk-delete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+            body: JSON.stringify({ records })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success !== false) {
+            if (typeof window.toast === "function") window.toast(data.message || "Records deleted", "success");
+            window.location.reload();
+          } else {
+            alert(data.message || data.detail || "Failed to delete records");
+            bulkBtn.disabled = false;
+            bulkBtn.textContent = prev;
+            update();
+          }
+        } catch (err) {
+          alert("Error: " + err.message);
+          bulkBtn.disabled = false;
+          bulkBtn.textContent = prev;
+          update();
+        }
+      };
+
+      if (typeof window.confirmAction === "function") {
+        window.confirmAction(
+          `Permanently delete ${records.length} DNS record(s)?`,
+          executeDelete,
+          { danger: true, title: "Bulk Delete Records", okLabel: `Delete ${records.length} Records`, itemName: `${records.length} Records` }
+        );
+      } else if (confirm(`Delete ${records.length} records?`)) {
+        executeDelete();
+      }
+    });
+  }
+}
 
 

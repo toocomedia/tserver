@@ -7,7 +7,7 @@
     - bulk_actions: List of dicts [{'action': 'delete', 'label': 'Delete Selected'}]
     - primary_action: Dict {'url': '/create', 'label': 'Create', 'icon': 'plus'}
 #}
-<div class="action-toolbar">
+<div class="action-toolbar"{% if bulk_endpoint %} data-bulk-endpoint="{{ bulk_endpoint }}"{% endif %}{% if bulk_table %} data-bulk-table="{{ bulk_table }}"{% endif %}{% if bulk_item_name %} data-bulk-item-name="{{ bulk_item_name }}"{% endif %}>
   <div class="action-toolbar__search">
     <input type="text" id="{{ search_id or 'table-search-input' }}" class="form-control" placeholder="{{ search_placeholder or 'Type to filter items...' }}" aria-label="Filter items">
   </div>

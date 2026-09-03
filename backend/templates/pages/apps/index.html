@@ -17,7 +17,9 @@
 <!-- END SKELETON OVERLAY -->
 
 {% if apps %}
-{% set search_id = 'app-search-input' %}
+{% set bulk_endpoint = '/apps/api/bulk' %}
+{% set bulk_table = 'apps-table' %}
+{% set bulk_item_name = 'App' %}
 {% set search_placeholder = 'Search apps by name, domain or port...' %}
 {% set filter_options = [
   {'val': 'running', 'label': _('running') if _('running') != 'running' else 'Running'},
@@ -102,49 +104,9 @@
 
 {% block scripts %}
 <script>
-let appsBulkController = null;
-
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('apps-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('apps-skeleton');
-
-  if (typeof window.initBulkActionsTable === 'function') {
-    appsBulkController = window.initBulkActionsTable({
-      tableId: 'apps-table',
-      endpoint: '/apps/api/bulk',
-      itemName: 'App',
-      confirmDangerActions: ['delete', 'uninstall']
-    });
-  }
-
-  const searchInput = document.getElementById('app-search-input') || document.getElementById('table-search-input');
-  const statusFilter = document.getElementById('status-filter-select');
-  if (searchInput) searchInput.addEventListener('input', filterAppsTable);
-  if (statusFilter) statusFilter.addEventListener('change', filterAppsTable);
 });
-
-function filterAppsTable() {
-  const query = (document.getElementById('app-search-input')?.value || document.getElementById('table-search-input')?.value || '').toLowerCase().trim();
-  const filter = (document.getElementById('status-filter-select'))?.value || 'all';
-  const rows = document.querySelectorAll('.app-row-item');
-
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const matchesSearch = !query || text.includes(query);
-    let matchesFilter = true;
-    if (filter !== 'all') {
-      matchesFilter = text.includes(filter);
-    }
-    if (matchesSearch && matchesFilter) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-      const cb = row.querySelector('.bulk-select-item');
-      if (cb) cb.checked = false;
-    }
-  });
-
-  if (appsBulkController) appsBulkController.updateState();
-}
 </script>
 {% endblock %}

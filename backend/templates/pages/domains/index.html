@@ -18,7 +18,9 @@
 
 {% if domain_statuses %}
 
-  {% set search_id = 'domain-search-input' %}
+  {% set bulk_endpoint = '/domains/api/bulk' %}
+  {% set bulk_table = 'domains-table' %}
+  {% set bulk_item_name = 'Domain' %}
   {% set search_placeholder = 'Search domains by name or IP...' %}
   {% set filter_options = [
     {'val': 'active', 'label': _('active_nginx')},
@@ -153,95 +155,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-let domainsBulkController = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('domains-skeleton');
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('domains-skeleton');
-
-  if (typeof window.initBulkActionsTable === 'function') {
-    domainsBulkController = window.initBulkActionsTable({
-      tableId: 'domains-table',
-      endpoint: '/domains/api/bulk',
-      itemName: 'Domain',
-      confirmDangerActions: ['delete']
-    });
-  }
-
-  const searchInput = document.getElementById('domain-search-input');
-  const statusFilter = document.getElementById('status-filter-select') || document.getElementById('domain-status-filter');
-  if (searchInput) searchInput.addEventListener('input', filterDomainsTable);
-  if (statusFilter) statusFilter.addEventListener('change', filterDomainsTable);
-});
-
-function filterDomainsTable() {
-  const query = (document.getElementById('domain-search-input')?.value || '').toLowerCase().trim();
-  const filter = (document.getElementById('status-filter-select') || document.getElementById('domain-status-filter'))?.value || 'all';
-  const rows = document.querySelectorAll('.domain-row-item');
-  let visibleCount = 0;
-
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const matchesSearch = !query || text.includes(query);
-    
-    let matchesFilter = true;
-    if (filter === 'active') {
-      matchesFilter = row.innerText.includes('ACTIVE');
-    } else if (filter === 'ssl') {
-      matchesFilter = row.innerText.includes('ISSUED');
-    }
-
-    if (matchesSearch && matchesFilter) {
-      row.style.display = '';
-      visibleCount++;
-    } else {
-      row.style.display = 'none';
-      const cb = row.querySelector('.bulk-select-item');
-      if (cb) cb.checked = false;
-    }
-  });
-
-  if (domainsBulkController) {
-    domainsBulkController.updateState();
-  }
-
-  const countLabel = document.getElementById('domain-count-label');
-  if (countLabel) {
-    countLabel.textContent = `${visibleCount} Configured`;
-  }
-}
-
-function deleteDomain(id, name) {
-  confirmAction(`Delete domain "${name}"? This will remove the DNS zone, Nginx config, webroot, and linked SSL certificate.`, async () => {
-    try {
-      const csrfToken = typeof getCsrfToken === "function" ? getCsrfToken() : "";
-      const response = await fetch(`/domains/${id}/delete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Requested-With": "XMLHttpRequest",
-          "Accept": "application/json",
-        },
-        body: new URLSearchParams({ csrf_token: csrfToken }),
-      });
-      const data = await response.json();
-      if (response.ok && (data.success || data.status === 'running')) {
-        toast(`Domain "${name}" deleted successfully.`, 'success');
-        const row = document.querySelector(`tr[data-domain-id="${id}"]`);
-        if (row) {
-          row.style.transition = "opacity 0.25s ease";
-          row.style.opacity = "0";
-          setTimeout(() => row.remove(), 250);
-        }
-        if (typeof window.refreshTasks === 'function') window.refreshTasks();
-      } else {
-        toast(data.error || data.message || 'Failed to delete domain', 'danger');
-      }
-    } catch (e) {
-      toast(e.message || 'Network error while deleting domain', 'danger');
-    }
-  }, { danger: true, title: 'Delete Domain', itemName: name, okLabel: 'Delete Domain' });
-}
-</script>
+<script src="/static/js/modules/domains.js?v={{ APP_VERSION }}"></script>
 {% endblock %}
