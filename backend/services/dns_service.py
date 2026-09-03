@@ -49,6 +49,20 @@ async def add_records(
     await powerdns.add_records(domain, name, rtype, contents, ttl)
 
 
+async def set_zone_nameservers(
+    domain: str, nameservers: list[str], ttl: int = 3600
+) -> list[str]:
+    """Set the authoritative @ NS records for a zone."""
+    cleaned = []
+    for ns in nameservers:
+        s = str(ns or "").strip().rstrip(".")
+        if s:
+            cleaned.append(f"{s}.")
+    if cleaned:
+        await powerdns.add_records(domain, "@", "NS", cleaned, ttl)
+    return cleaned
+
+
 async def delete_record(
     domain: str, name: str, rtype: str, content: str | None = None
 ) -> None:

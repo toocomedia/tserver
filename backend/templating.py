@@ -9,10 +9,13 @@ Rules:
 """
 from __future__ import annotations
 
+from pathlib import Path
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from middleware.csrf import ensure_csrf_token
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 # Canonical app paths (section indexes — trailing slash)
 PATHS: dict[str, str] = {
@@ -135,7 +138,7 @@ def csrf_token(request: Request) -> str:
     return ensure_csrf_token(request)
 
 
-from jinja2 import select_autoescape, pass_context
+from jinja2 import select_autoescape, pass_context, ChoiceLoader, FileSystemLoader
 import config
 from services.i18n_service import i18n_service
 
@@ -177,7 +180,15 @@ def get_js_translations(context) -> str:
         
     return json.dumps(js_strings)
 
-templates = Jinja2Templates(directory="templates")
+_template_dirs = [str(_TEMPLATES_DIR)]
+_plugins_dir = Path(__file__).parent / "plugins"
+if _plugins_dir.exists():
+    for _p in _plugins_dir.iterdir():
+        if _p.is_dir() and (_p / "templates").exists():
+            _template_dirs.append(str(_p / "templates"))
+
+templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+templates.env.loader = ChoiceLoader([FileSystemLoader(_d) for _d in _template_dirs])
 templates.env.autoescape = select_autoescape(["html", "xml"])
 templates.env.globals["path"] = app_path
 templates.env.globals["PATHS"] = PATHS

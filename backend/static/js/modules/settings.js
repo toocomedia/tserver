@@ -73,6 +73,10 @@
       hsts_enabled: !!$("hsts_enabled")?.checked,
       session_max_age_days: parseInt($("session_max_age_days")?.value || "7", 10),
       panel_ssl_auto_renew_enabled: !!$("panel_ssl_auto_renew_enabled")?.checked,
+      default_ns1: ($("default_ns1")?.value || "").trim(),
+      default_ns2: ($("default_ns2")?.value || "").trim(),
+      default_ns3: ($("default_ns3")?.value || "").trim(),
+      default_ns_mode: document.querySelector('input[name="default_ns_mode"]:checked')?.value || "panel_default",
     };
   }
 
@@ -142,6 +146,19 @@
     if ($("hsts_enabled")) $("hsts_enabled").checked = !!s.hsts_enabled;
     if ($("panel_ssl_auto_renew_enabled")) $("panel_ssl_auto_renew_enabled").checked = !!s.panel_ssl_auto_renew_enabled;
     if ($("session_max_age_days")) $("session_max_age_days").value = s.session_max_age_days || 7;
+    if ($("default_ns1") && document.activeElement !== $("default_ns1")) $("default_ns1").value = s.default_ns1 || "";
+    if ($("default_ns2") && document.activeElement !== $("default_ns2")) $("default_ns2").value = s.default_ns2 || "";
+    if ($("default_ns3") && document.activeElement !== $("default_ns3")) $("default_ns3").value = s.default_ns3 || "";
+    if (s.default_ns_mode) {
+      const nsRadio = document.querySelector(`input[name="default_ns_mode"][value="${s.default_ns_mode}"]`);
+      if (nsRadio) {
+        nsRadio.checked = true;
+        document.querySelectorAll('input[name="default_ns_mode"]').forEach(el => {
+          const card = el.closest('.settings-choice');
+          if (card) card.classList.toggle('settings-choice--active', el.checked);
+        });
+      }
+    }
     if ($("stat-server-ip")) $("stat-server-ip").textContent = s.server_ip || "";
     if ($("stat-hostname")) {
       $("stat-hostname").textContent = s.panel_domain || "— (IP only)";
@@ -496,11 +513,19 @@
     $("custom_domain")?.addEventListener("input", syncUrlModeUi);
     $("subdomain_label")?.addEventListener("input", syncUrlModeUi);
     $("parent_domain")?.addEventListener("change", syncUrlModeUi);
-    $("allow_ip")?.addEventListener("change", syncUrlModeUi);
+    document.querySelectorAll('input[name="default_ns_mode"]').forEach((el) => {
+      el.addEventListener("change", () => {
+        document.querySelectorAll('input[name="default_ns_mode"]').forEach(r => {
+          const card = r.closest('.settings-choice');
+          if (card) card.classList.toggle('settings-choice--active', r.checked);
+        });
+      });
+    });
 
     $("btn-save-panel")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-save-ip")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-save-security")?.addEventListener("click", (e) => save(e.currentTarget));
+    $("btn-save-dns")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-issue-ssl")?.addEventListener("click", (e) => issueSsl(e.currentTarget));
     $("btn-remove-ssl")?.addEventListener("click", (e) => removeSsl(e.currentTarget));
     $("btn-refresh-settings")?.addEventListener("click", refresh);

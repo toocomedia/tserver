@@ -82,12 +82,16 @@ async def create(
     project_type: str = "static",
     dns_mode: str = "new_zone",
     parent_domain: str | None = None,
+    ns_mode: str = "panel_default",
+    external_provider: str | None = None,
+    external_credentials: dict | None = None,
+    external_zone_ref: str | None = None,
 ) -> Domain:
     """
     Full domain creation:
     1. Validate name
     2. Check DB + nginx for duplicates
-    3. Setup DNS (either separate zone or A record in parent zone)
+    3. Setup DNS (panel_default, child_ns, manual, or external)
     4. If Website (static): Create webroot + default index.html, create nginx static site, test & reload
     5. Save to DB
     """
@@ -143,14 +147,72 @@ async def create(
             steps_done.append(f"dns_parent_record:{parent_domain}:{prefix}")
             dns_zone_created = False
             saved_parent_domain = parent_domain
+
+        elif ns_mode == "manual":
+            # DNS managed manually (e.g. Cloudflare / 3rd party) — no local zone
+            dns_zone_created = False
+            saved_parent_domain = None
+
+        elif ns_mode == "external":
+            # DNS managed via external provider plugin (e.g. Hetzner)
+            from services import external_dns_bridge
+            if not external_dns_bridge.plugin_active():
+                raise HTTPException(status_code=400, detail="External DNS plugin is not active.")
+            if not external_provider or not external_credentials:
+                raise HTTPException(status_code=400, detail="External provider and credentials are required.")
+            dns_zone_created = False
+            saved_parent_domain = None
+
+        elif ns_mode == "child_ns":
+            # Standalone PowerDNS zone with vanity child nameservers
+            await dns_service.create_zone(name)
+            steps_done.append("dns_zone")
+
+            # DNS A record for @
+            await dns_service.add_a_record(name, "@", config.SERVER_IP)
+            steps_done.append("dns_record")
+
+            # A records for ns1 and ns2
+            await dns_service.add_a_record(name, "ns1", config.SERVER_IP)
+            await dns_service.add_a_record(name, "ns2", config.SERVER_IP)
+            steps_done.append("dns_child_a")
+
+            # Set @ NS records
+            await dns_service.set_zone_nameservers(name, [f"ns1.{name}", f"ns2.{name}"])
+            steps_done.append("dns_child_ns")
+
+            dns_zone_created = True
+            saved_parent_domain = None
+
         else:
-            # Standalone DNS zone
+            # Standalone PowerDNS zone with Panel Default Nameservers
             await dns_service.create_zone(name)
             steps_done.append("dns_zone")
 
             # DNS A record → server IP
             await dns_service.add_a_record(name, "@", config.SERVER_IP)
             steps_done.append("dns_record")
+
+            # Default nameservers from settings/config
+            ns_list = []
+            if getattr(config, "DEFAULT_NS1", ""):
+                ns_list.append(config.DEFAULT_NS1)
+            if getattr(config, "DEFAULT_NS2", ""):
+                ns_list.append(config.DEFAULT_NS2)
+            if getattr(config, "DEFAULT_NS3", ""):
+                ns_list.append(config.DEFAULT_NS3)
+
+            # Fallback if no default NS configured:
+            # Check if panel domain is configured
+            if not ns_list:
+                panel_host = getattr(config, "PANEL_DOMAIN", "")
+                if panel_host and panel_host != config.SERVER_IP and "." in panel_host:
+                    ns_list = [f"ns1.{panel_host}", f"ns2.{panel_host}"]
+
+            if ns_list:
+                await dns_service.set_zone_nameservers(name, ns_list)
+                steps_done.append("dns_default_ns")
+
             dns_zone_created = True
             saved_parent_domain = None
 
@@ -184,7 +246,19 @@ async def create(
         )
         db.add(domain)
         await db.flush()
-        logger.info("Domain created: %s (type=%s, dns_mode=%s)", name, project_type, dns_mode)
+
+        if ns_mode == "external" and external_provider and external_credentials:
+            from services import external_dns_bridge
+            await external_dns_bridge.bind(
+                db=db,
+                domain=name,
+                provider=external_provider,
+                credentials=external_credentials,
+                zone_ref=external_zone_ref or name,
+            )
+            steps_done.append(f"external_dns_bind:{name}")
+
+        logger.info("Domain created: %s (type=%s, dns_mode=%s, ns_mode=%s)", name, project_type, dns_mode, ns_mode)
         return domain
 
     except Exception as exc:
@@ -199,13 +273,13 @@ async def create(
             detail=detail,
             context={"domain": name, "steps_done": steps_done},
         )
-        await _rollback(name, steps_done)
+        await _rollback(name, steps_done, db=db)
         if isinstance(exc, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-async def _rollback(name: str, steps_done: list[str]) -> None:
+async def _rollback(name: str, steps_done: list[str], db: AsyncSession | None = None) -> None:
     """Undo completed steps in reverse order."""
     for step in reversed(steps_done):
         try:
@@ -215,6 +289,9 @@ async def _rollback(name: str, steps_done: list[str]) -> None:
                 nginx_service.remove_webroot(name)
             elif step == "dns_zone":
                 await dns_service.delete_zone(name)
+            elif step.startswith("external_dns_bind:") and db is not None:
+                from services import external_dns_bridge
+                await external_dns_bridge.unbind(db, name)
             elif step.startswith("dns_parent_record:"):
                 parts = step.split(":", 2)
                 parent_dom = parts[1]

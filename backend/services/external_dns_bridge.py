@@ -155,3 +155,28 @@ async def push_records(db: AsyncSession, domain: str, rows: list[dict]) -> dict:
         raise
     except Exception as exc:
         raise _http(exc) from exc
+
+
+async def bind(
+    db: AsyncSession, domain: str, provider: str, credentials: dict, zone_ref: str = ""
+) -> dict:
+    """Bind a domain to an external DNS provider."""
+    service, _ = _load()
+    if service is None:
+        raise HTTPException(status_code=400, detail="External DNS plugin is not active.")
+    try:
+        return await service.bind(db, domain, provider, credentials, zone_ref)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http(exc) from exc
+
+
+async def unbind(db: AsyncSession, domain: str) -> None:
+    """Unbind a domain from an external DNS provider."""
+    service, _ = _load()
+    if service is not None:
+        try:
+            await service.unbind(db, domain)
+        except Exception as exc:
+            logger.warning("External DNS unbind failed: %s", exc)

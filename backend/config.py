@@ -102,6 +102,10 @@ DATABASE_URL: str = f"sqlite+aiosqlite:///{DB_PATH}"
 PDNS_URL: str = os.getenv("PDNS_URL", "http://127.0.0.1:8081")
 PDNS_API_KEY: str = os.getenv("PDNS_API_KEY", "")
 PDNS_SERVER_ID: str = "localhost"
+DEFAULT_NS1: str = os.getenv("DEFAULT_NS1", "")
+DEFAULT_NS2: str = os.getenv("DEFAULT_NS2", "")
+DEFAULT_NS3: str = os.getenv("DEFAULT_NS3", "")
+DEFAULT_NS_MODE: str = os.getenv("DEFAULT_NS_MODE", "panel_default")
 
 # ---------------------------------------------------------
 # Nginx

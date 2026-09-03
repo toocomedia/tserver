@@ -17,8 +17,9 @@
     {{ wizard.render_steps([
       {'id': 'nav-step-1', 'onclick': 'goToStep(1)', 'label': _('hostname')},
       {'id': 'nav-step-2', 'onclick': 'goToStep(2)', 'label': _('domain_purpose')},
-      {'id': 'nav-step-3', 'onclick': 'goToStep(3)', 'label': _('ssl_certificate')},
-      {'id': 'nav-step-4', 'onclick': 'goToStep(4)', 'label': _('review_deploy')}
+      {'id': 'nav-step-3', 'onclick': 'goToStep(3)', 'label': _('dns_nameservers')},
+      {'id': 'nav-step-4', 'onclick': 'goToStep(4)', 'label': _('ssl_certificate')},
+      {'id': 'nav-step-5', 'onclick': 'goToStep(5)', 'label': _('review_deploy')}
     ]) }}
   </div>
 
@@ -33,6 +34,9 @@
     <input type="hidden" name="project_type" id="project-type-input" value="{% if project_type %}{{ project_type }}{% else %}static{% endif %}">
     <!-- Smart Subdomain DNS Mode: 'new_zone' or 'parent_record' -->
     <input type="hidden" name="dns_mode" id="dns-mode-input" value="{% if dns_mode %}{{ dns_mode }}{% else %}new_zone{% endif %}">
+    <!-- Nameserver Mode: 'panel_default', 'child_ns', 'external', 'manual' -->
+    <input type="hidden" name="ns_mode" id="ns-mode-input" value="{% if ns_mode %}{{ ns_mode }}{% else %}panel_default{% endif %}">
+    <input type="hidden" name="external_provider" id="external-provider-input" value="">
     <input type="hidden" name="parent_domain" id="parent-domain-input" value="{{ parent_domain or '' }}">
 
     <!-- STEP 1: HOSTNAME -->
@@ -78,8 +82,83 @@
       </div>
     </div>
 
-    <!-- STEP 3: SSL CERTIFICATE -->
+    <!-- STEP 3: DNS & NAMESERVERS -->
     <div id="panel-3" style="display:none;flex-direction:column;">
+      <div id="subdomain-notice" style="display:none; margin-bottom:16px;" class="alert alert--neutral">
+        <strong id="subdomain-parent-name"></strong>: {{ _('subdomain_routed_to_parent') }}
+      </div>
+
+      <div class="form-group-horizontal" id="ns-options-container" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+        <div class="form-label-wrap">
+          <label class="form-label">{{ _('dns_nameservers') }}</label>
+          <span class="form-hint">{{ _('choose_nameserver_delegation_mode') }}</span>
+        </div>
+        <div class="settings-choice-grid">
+          
+          <!-- Panel Default Nameservers -->
+          <label class="settings-choice {% if ns_mode == 'panel_default' or not ns_mode %}settings-choice--active{% endif %} ns-opt-item" id="ns-choice-panel" onclick="selectNsMode('panel_default', 'Panel Default')">
+            <div class="settings-choice__header">
+              <input type="radio" name="ns_opt" value="panel_default" {% if ns_mode == 'panel_default' or not ns_mode %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('panel_nameservers') }}</span>
+            </div>
+            <span class="settings-choice__desc">
+              {% if default_ns1 %}{{ default_ns1 }}{% if default_ns2 %}, {{ default_ns2 }}{% endif %}{% else %}{{ _('default_nameservers_short_desc') }}{% endif %}
+            </span>
+          </label>
+          
+          <!-- Child Nameservers -->
+          <label class="settings-choice {% if ns_mode == 'child_ns' %}settings-choice--active{% endif %} ns-opt-item" id="ns-choice-child" onclick="selectNsMode('child_ns', 'Child Nameservers')">
+            <div class="settings-choice__header">
+              <input type="radio" name="ns_opt" value="child_ns" {% if ns_mode == 'child_ns' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('child_nameservers') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('child_nameservers_short_desc') }}</span>
+          </label>
+
+          <!-- External DNS Provider -->
+          <label class="settings-choice {% if ns_mode == 'external' %}settings-choice--active{% endif %} ns-opt-item {% if not external_active %}settings-choice--disabled{% endif %}" id="ns-choice-external" {% if external_active %}onclick="selectNsMode('external', 'External Provider')"{% else %}style="opacity:0.5; cursor:not-allowed;" title="{{ _('external_dns_plugin_disabled') }}"{% endif %}>
+            <div class="settings-choice__header">
+              <input type="radio" name="ns_opt" value="external" {% if ns_mode == 'external' %}checked{% endif %} {% if not external_active %}disabled{% endif %}>
+              <span class="settings-choice__title">{{ _('external_dns_provider') }}</span>
+              {% if not external_active %}
+                <span class="badge badge--neutral" style="margin-left:auto; font-size:10px;">{{ _('plugin_disabled') }}</span>
+              {% endif %}
+            </div>
+            <span class="settings-choice__desc">{{ _('external_dns_short_desc') }}</span>
+          </label>
+
+          <!-- Manual External DNS -->
+          <label class="settings-choice {% if ns_mode == 'manual' %}settings-choice--active{% endif %} ns-opt-item" id="ns-choice-manual" onclick="selectNsMode('manual', 'Manual Third-Party DNS')">
+            <div class="settings-choice__header">
+              <input type="radio" name="ns_opt" value="manual" {% if ns_mode == 'manual' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('manual_external_dns') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('manual_external_short_desc') }}</span>
+          </label>
+
+        </div>
+      </div>
+
+      {% if external_active %}
+      <div id="external-creds-container" style="display:none; margin-top:16px; padding:16px; border:1px solid var(--color-line); border-radius:6px; background:var(--color-surface);">
+        <div class="form-group mb-sm">
+          <label class="form-label" style="font-size:12px;">{{ _('provider') }}</label>
+          <select class="form-input" id="external-provider-select" onchange="onExternalProviderChange()">
+            {% for p in external_providers %}
+              <option value="{{ p.id }}">{{ p.id|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label" style="font-size:12px;">API Token / Key</label>
+          <input class="form-input" type="password" id="external-token-input" placeholder="Enter API token" autocomplete="off">
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- STEP 4: SSL CERTIFICATE -->
+    <div id="panel-4" style="display:none;flex-direction:column;">
       <div class="form-group-horizontal" id="ssl-options-container" style="border-bottom:none; margin-bottom:0; padding-bottom:0; {% if project_type == 'dns' %}display:none;{% endif %}">
         <div class="form-label-wrap">
           <label class="form-label">{{ _('ssl_certificate_security') }}</label>
@@ -109,8 +188,8 @@
       </div>
     </div>
 
-    <!-- STEP 4: REVIEW -->
-    <div id="panel-4" style="display:none;flex-direction:column;">
+    <!-- STEP 5: REVIEW -->
+    <div id="panel-5" style="display:none;flex-direction:column;">
       <div style="margin-bottom: 24px; border-bottom: 1px solid var(--color-line); padding-bottom: 12px;">
         <h3 style="margin:0; font-size: 16px;">{{ _('review_deploy') }}</h3>
       </div>
@@ -128,6 +207,11 @@
       <div class="info-row-strict">
         <div class="info-row-strict__label">{{ _('dns_routing') }}</div>
         <div class="info-row-strict__val" id="rev-dns-mode">{{ _('standalone_dns_zone') }}</div>
+      </div>
+
+      <div class="info-row-strict">
+        <div class="info-row-strict__label">{{ _('nameservers') }}</div>
+        <div class="info-row-strict__val" id="rev-ns-mode">{{ _('panel_nameservers') }}</div>
       </div>
 
       <div class="info-row-strict" id="rev-nginx-row" {% if project_type == 'dns' %}style="display:none;"{% endif %}>
@@ -188,7 +272,7 @@ let checkTimeout = null;
 /* INTERCEPT ENTER KEY */
 form.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
-    if (currentStep !== 4) {
+    if (currentStep !== 5) {
       e.preventDefault();
       goNextStep();
       return false;
@@ -204,11 +288,17 @@ function onHostnameInput() {
 
 async function checkHostnameApi() {
   const val = input.value.trim().toLowerCase();
+  const subNotice = document.getElementById('subdomain-notice');
+  const subParent = document.getElementById('subdomain-parent-name');
+  const nsContainer = document.getElementById('ns-options-container');
+
   if (!val || !domainRe.test(val)) {
     currentParentDomain = null;
     currentSubdomainPrefix = null;
     parentDomainInput.value = '';
     dnsModeInput.value = 'new_zone';
+    if (subNotice) subNotice.style.display = 'none';
+    if (nsContainer) nsContainer.style.display = 'flex';
     updateReviewDns();
     return;
   }
@@ -233,12 +323,19 @@ async function checkHostnameApi() {
       currentSubdomainPrefix = data.subdomain_prefix;
       parentDomainInput.value = data.parent_domain;
       dnsModeInput.value = 'parent_record';
+      if (subNotice) {
+        subNotice.style.display = 'block';
+        if (subParent) subParent.textContent = data.parent_domain;
+      }
+      if (nsContainer) nsContainer.style.display = 'none';
       updateReviewDns();
     } else {
       currentParentDomain = null;
       currentSubdomainPrefix = null;
       parentDomainInput.value = '';
       dnsModeInput.value = 'new_zone';
+      if (subNotice) subNotice.style.display = 'none';
+      if (nsContainer) nsContainer.style.display = 'flex';
       updateReviewDns();
     }
   } catch (err) {
@@ -249,6 +346,31 @@ async function checkHostnameApi() {
 function selectDnsMode(mode) {
   dnsModeInput.value = mode;
   updateReviewDns();
+}
+
+function selectNsMode(mode, title) {
+  const nsInput = document.getElementById('ns-mode-input');
+  if (nsInput) nsInput.value = mode;
+
+  document.querySelectorAll('.ns-opt-item').forEach(c => c.classList.remove('settings-choice--active'));
+  const choiceId = 'ns-choice-' + (mode === 'panel_default' ? 'panel' : mode === 'child_ns' ? 'child' : mode);
+  const activeChoice = document.getElementById(choiceId);
+  if (activeChoice) activeChoice.classList.add('settings-choice--active');
+
+  const radio = activeChoice?.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
+
+  const credsBox = document.getElementById('external-creds-container');
+  if (credsBox) credsBox.style.display = (mode === 'external') ? 'block' : 'none';
+
+  const revNs = document.getElementById('rev-ns-mode');
+  if (revNs) revNs.textContent = title;
+}
+
+function onExternalProviderChange() {
+  const sel = document.getElementById('external-provider-select');
+  const inp = document.getElementById('external-provider-input');
+  if (inp && sel) inp.value = sel.value;
 }
 
 function updateReviewDns() {
@@ -263,7 +385,7 @@ function updateReviewDns() {
 }
 
 function goNextStep() {
-  if (currentStep < 4) {
+  if (currentStep < 5) {
     if (currentStep === 1) {
       const val = input.value.trim().toLowerCase();
       if (!val || !domainRe.test(val)) {
@@ -299,7 +421,7 @@ function goToStep(step) {
   currentStep = step;
 
   // Update panels and nav
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const panel = document.getElementById('panel-' + i);
     if (panel) panel.style.display = (i === step) ? 'flex' : 'none';
     
@@ -327,14 +449,20 @@ function goToStep(step) {
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
     backText.textContent = window._('back_to_hostname') || 'Back';
-    nextText.textContent = window._('continue_to_ssl') || 'Continue to SSL →';
+    nextText.textContent = window._('continue_to_dns') || 'Continue to DNS →';
   } else if (step === 3) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
     backText.textContent = window._('back_to_purpose') || 'Back';
-    nextText.textContent = window._('review_provision') || 'Review & Provision →';
+    nextText.textContent = window._('continue_to_ssl') || 'Continue to SSL →';
   } else if (step === 4) {
+    backBtn.style.display = 'block';
+    nextBtn.style.display = 'block';
+    submitBtn.style.display = 'none';
+    backText.textContent = window._('back_to_dns') || 'Back';
+    nextText.textContent = window._('review_provision') || 'Review & Provision →';
+  } else if (step === 5) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'none';
     submitBtn.style.display = 'block';
@@ -363,10 +491,8 @@ function syncDomain() {
 }
 
 function selectPurpose(type, title) {
-  // Update hidden input
   document.getElementById('project-type-input').value = type;
 
-  // Update UI active state
   document.querySelectorAll('.opt-item').forEach(c => c.classList.remove('settings-choice--active'));
   const activeChoice = document.getElementById('purpose-choice-' + type);
   if (activeChoice) activeChoice.classList.add('settings-choice--active');
@@ -374,7 +500,6 @@ function selectPurpose(type, title) {
   const radio = activeChoice?.querySelector('input[type="radio"]');
   if (radio) radio.checked = true;
 
-  // Update review text
   document.getElementById('rev-purpose').textContent = title;
   
   const nginxRow = document.getElementById('rev-nginx-row');
@@ -391,7 +516,7 @@ function selectPurpose(type, title) {
     if (nginxRow) nginxRow.style.display = 'flex';
     if (sslContainer) sslContainer.style.display = 'grid';
     if (sslDnsMsg) sslDnsMsg.style.display = 'none';
-    selectSsl(currentSslEnabled); // Restore previous user SSL selection
+    selectSsl(currentSslEnabled);
   }
 }
 
@@ -431,11 +556,19 @@ form.addEventListener('submit', async (e) => {
   submitBtn.classList.add('is-loading');
 
   try {
+    const nsMode = document.getElementById('ns-mode-input')?.value || 'panel_default';
+    const extProvider = (nsMode === 'external') ? (document.getElementById('external-provider-select')?.value || 'hetzner') : '';
+    const extToken = (nsMode === 'external') ? (document.getElementById('external-token-input')?.value || '') : '';
+    const extCreds = extToken ? { token: extToken } : {};
+
     const payload = {
       name: val,
       project_type: document.getElementById('project-type-input')?.value || 'static',
       ssl_enabled: document.getElementById('ssl-enabled-input')?.value || 'no',
       dns_mode: document.getElementById('dns-mode-input')?.value || 'new_zone',
+      ns_mode: nsMode,
+      external_provider: extProvider || null,
+      external_credentials: extCreds,
       parent_domain: document.getElementById('parent-domain-input')?.value || '',
     };
 
@@ -455,7 +588,7 @@ form.addEventListener('submit', async (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   syncDomain();
   onHostnameInput();
-  goToStep(1); // Initialize UI state
+  goToStep(1);
 });
 </script>
 {% endblock %}

@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from services import domain_service, nginx_service
+from services import domain_service, nginx_service, external_dns_bridge
 from services.task_manager_service import task_manager_service
 from middleware.auth import wants_json
 from models.ssl_cert import SslCert
@@ -257,6 +257,8 @@ async def check_hostname(
 # ---------------------------------------------------------------
 @router.get("/create", response_class=HTMLResponse)
 async def domains_create_page(request: Request):
+    external_active = external_dns_bridge.plugin_active()
+    external_providers = external_dns_bridge.all_providers() if external_active else []
     return templates.TemplateResponse("pages/domains/create.html", {
         "request": request,
         "active_page": "domains",
@@ -265,6 +267,12 @@ async def domains_create_page(request: Request):
         "name": "",
         "project_type": "static",
         "dns_mode": "new_zone",
+        "ns_mode": getattr(config, "DEFAULT_NS_MODE", "panel_default") or "panel_default",
+        "default_ns1": getattr(config, "DEFAULT_NS1", "") or "",
+        "default_ns2": getattr(config, "DEFAULT_NS2", "") or "",
+        "default_ns3": getattr(config, "DEFAULT_NS3", "") or "",
+        "external_active": external_active,
+        "external_providers": external_providers,
         "parent_domain": "",
     })
 
@@ -280,6 +288,10 @@ async def domains_create(
     content_type = request.headers.get("content-type", "").lower()
     is_json = "application/json" in content_type or wants_json(request)
 
+    external_provider = None
+    external_credentials = {}
+    external_zone_ref = None
+
     if "application/json" in content_type:
         try:
             body = await request.json()
@@ -287,7 +299,11 @@ async def domains_create(
             project_type = str(body.get("project_type") or "static").strip().lower()
             ssl_enabled = str(body.get("ssl_enabled") or "no").strip().lower()
             dns_mode = str(body.get("dns_mode") or "new_zone").strip().lower()
+            ns_mode = str(body.get("ns_mode") or "panel_default").strip().lower()
             parent_domain = body.get("parent_domain")
+            external_provider = str(body.get("external_provider") or "").strip().lower() or None
+            external_credentials = body.get("external_credentials") or {}
+            external_zone_ref = str(body.get("external_zone_ref") or "").strip() or None
         except Exception:
             raise HTTPException(400, "Invalid JSON payload")
     else:
@@ -296,11 +312,20 @@ async def domains_create(
         project_type = str(form_data.get("project_type") or "static").strip().lower()
         ssl_enabled = str(form_data.get("ssl_enabled") or "no").strip().lower()
         dns_mode = str(form_data.get("dns_mode") or "new_zone").strip().lower()
+        ns_mode = str(form_data.get("ns_mode") or "panel_default").strip().lower()
         parent_domain = form_data.get("parent_domain")
+        external_provider = str(form_data.get("external_provider") or "").strip().lower() or None
+        external_zone_ref = str(form_data.get("external_zone_ref") or "").strip() or None
+        if external_provider:
+            for k, v in form_data.items():
+                if k.startswith("ext_cred_"):
+                    external_credentials[k[len("ext_cred_"):]] = v
 
     if not name:
         if is_json:
             raise HTTPException(400, "Domain name is required.")
+        external_active = external_dns_bridge.plugin_active()
+        external_providers = external_dns_bridge.all_providers() if external_active else []
         return templates.TemplateResponse("pages/domains/create.html", {
             "request": request,
             "active_page": "domains",
@@ -309,6 +334,12 @@ async def domains_create(
             "name": "",
             "project_type": project_type,
             "dns_mode": dns_mode,
+            "ns_mode": ns_mode,
+            "default_ns1": getattr(config, "DEFAULT_NS1", "") or "",
+            "default_ns2": getattr(config, "DEFAULT_NS2", "") or "",
+            "default_ns3": getattr(config, "DEFAULT_NS3", "") or "",
+            "external_active": external_active,
+            "external_providers": external_providers,
             "parent_domain": parent_domain or "",
         }, status_code=400)
 
@@ -325,6 +356,10 @@ async def domains_create(
                     project_type=project_type,
                     dns_mode=dns_mode,
                     parent_domain=clean_parent,
+                    ns_mode=ns_mode,
+                    external_provider=external_provider,
+                    external_credentials=external_credentials,
+                    external_zone_ref=external_zone_ref,
                 )
                 await bg_db.commit()
                 task_rec.add_log(f"Domain {name} records and Nginx configuration created.")
@@ -364,6 +399,10 @@ async def domains_create(
             project_type=project_type,
             dns_mode=dns_mode,
             parent_domain=clean_parent,
+            ns_mode=ns_mode,
+            external_provider=external_provider,
+            external_credentials=external_credentials,
+            external_zone_ref=external_zone_ref,
         )
         await task_manager_service.record_completed_task(
             category="domain",

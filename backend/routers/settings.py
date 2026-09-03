@@ -33,6 +33,10 @@ class PanelSettingsIn(BaseModel):
     hsts_enabled: bool = False
     session_max_age_days: int = Field(default=7, ge=1, le=365)
     panel_ssl_auto_renew_enabled: bool = True
+    default_ns1: str = ""
+    default_ns2: str = ""
+    default_ns3: str = ""
+    default_ns_mode: str = "panel_default"
 
 
 @router.get("/settings", include_in_schema=False)

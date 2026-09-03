@@ -65,6 +65,10 @@ def _apply_runtime(updates: dict[str, str]) -> None:
         "SECURITY_HEADERS": lambda v: str(v).lower() in ("1", "true", "yes", "on"),
         "HSTS_ENABLED": lambda v: str(v).lower() in ("1", "true", "yes", "on"),
         "PANEL_SSL_AUTO_RENEW_ENABLED": lambda v: str(v).lower() in ("1", "true", "yes", "on"),
+        "DEFAULT_NS1": str,
+        "DEFAULT_NS2": str,
+        "DEFAULT_NS3": str,
+        "DEFAULT_NS_MODE": str,
     }
     for key, raw in updates.items():
         if key not in casts:
@@ -284,6 +288,10 @@ async def get_status() -> dict:
         "perf_gzip": bool(config.NGINX_PERF_GZIP),
         "perf_static_cache": bool(config.NGINX_PERF_STATIC_CACHE),
         "panel_ssl_auto_renew_enabled": bool(config.PANEL_SSL_AUTO_RENEW_ENABLED),
+        "default_ns1": str(getattr(config, "DEFAULT_NS1", "") or ""),
+        "default_ns2": str(getattr(config, "DEFAULT_NS2", "") or ""),
+        "default_ns3": str(getattr(config, "DEFAULT_NS3", "") or ""),
+        "default_ns_mode": str(getattr(config, "DEFAULT_NS_MODE", "panel_default") or "panel_default"),
     }
 
 
@@ -462,6 +470,18 @@ async def save_settings(payload: dict) -> dict:
     elif mode == "custom" and domain:
         notes.append(f"Create A record: {domain} → {config.SERVER_IP}")
 
+    def _clean_ns(val: str | None) -> str:
+        s = str(val or "").strip().lower().rstrip(".")
+        s = s.replace("http://", "").replace("https://", "").split("/")[0]
+        return s
+
+    ns1 = _clean_ns(payload.get("default_ns1", getattr(config, "DEFAULT_NS1", "")))
+    ns2 = _clean_ns(payload.get("default_ns2", getattr(config, "DEFAULT_NS2", "")))
+    ns3 = _clean_ns(payload.get("default_ns3", getattr(config, "DEFAULT_NS3", "")))
+    ns_mode = str(payload.get("default_ns_mode", getattr(config, "DEFAULT_NS_MODE", "panel_default")) or "panel_default").strip().lower()
+    if ns_mode not in ("panel_default", "child_ns", "manual"):
+        ns_mode = "panel_default"
+
     env = {
         "PANEL_DOMAIN": domain if domain else config.SERVER_IP,
         "PANEL_URL_MODE": mode,
@@ -474,6 +494,10 @@ async def save_settings(payload: dict) -> dict:
         "SECURITY_HEADERS": _bool_env(bool(payload.get("security_headers", True))),
         "HSTS_ENABLED": _bool_env(bool(payload.get("hsts_enabled", False))),
         "PANEL_SSL_AUTO_RENEW_ENABLED": _bool_env(bool(payload.get("panel_ssl_auto_renew_enabled", True))),
+        "DEFAULT_NS1": ns1,
+        "DEFAULT_NS2": ns2,
+        "DEFAULT_NS3": ns3,
+        "DEFAULT_NS_MODE": ns_mode,
     }
     await env_file.set_env_values(env)
     _apply_runtime(env)

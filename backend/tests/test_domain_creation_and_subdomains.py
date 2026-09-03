@@ -490,6 +490,121 @@ class TestDomainCreationAndSubdomains(unittest.IsolatedAsyncioTestCase):
         finally:
             test_app.dependency_overrides.pop(get_db, None)
 
+    @patch("services.nginx_service.reload", new_callable=AsyncMock)
+    @patch("services.nginx_service.create_static_site", new_callable=AsyncMock)
+    @patch("services.nginx_service.create_webroot")
+    @patch("services.nginx_service.ensure_acme_root")
+    @patch("services.nginx_service.server_name_in_use", return_value=False)
+    @patch("services.dns_service.set_zone_nameservers", new_callable=AsyncMock)
+    @patch("services.dns_service.add_a_record", new_callable=AsyncMock)
+    @patch("services.dns_service.create_zone", new_callable=AsyncMock)
+    async def test_create_domain_child_ns(
+        self,
+        mock_create_zone,
+        mock_add_a_record,
+        mock_set_ns,
+        mock_server_name_in_use,
+        mock_ensure_acme_root,
+        mock_create_webroot,
+        mock_create_static_site,
+        mock_reload,
+    ):
+        mock_create_webroot.return_value = "/var/www/childns.com"
+        mock_create_static_site.return_value = "/etc/nginx/sites-available/childns.com.conf"
+
+        async with self.session_factory() as session:
+            domain = await domain_service.create(
+                session,
+                name="childns.com",
+                project_type="static",
+                ns_mode="child_ns",
+            )
+            await session.commit()
+
+            self.assertEqual(domain.name, "childns.com")
+            self.assertTrue(domain.dns_zone_created)
+            mock_create_zone.assert_awaited_once_with("childns.com")
+            self.assertEqual(mock_add_a_record.await_count, 3)
+            mock_set_ns.assert_awaited_once_with("childns.com", ["ns1.childns.com", "ns2.childns.com"])
+
+    @patch("services.nginx_service.reload", new_callable=AsyncMock)
+    @patch("services.nginx_service.create_static_site", new_callable=AsyncMock)
+    @patch("services.nginx_service.create_webroot")
+    @patch("services.nginx_service.ensure_acme_root")
+    @patch("services.nginx_service.server_name_in_use", return_value=False)
+    @patch("services.dns_service.set_zone_nameservers", new_callable=AsyncMock)
+    @patch("services.dns_service.add_a_record", new_callable=AsyncMock)
+    @patch("services.dns_service.create_zone", new_callable=AsyncMock)
+    async def test_create_domain_panel_default_ns(
+        self,
+        mock_create_zone,
+        mock_add_a_record,
+        mock_set_ns,
+        mock_server_name_in_use,
+        mock_ensure_acme_root,
+        mock_create_webroot,
+        mock_create_static_site,
+        mock_reload,
+    ):
+        import config
+        old_ns1 = getattr(config, "DEFAULT_NS1", "")
+        old_ns2 = getattr(config, "DEFAULT_NS2", "")
+        config.DEFAULT_NS1 = "ns1.srvpanel.net"
+        config.DEFAULT_NS2 = "ns2.srvpanel.net"
+
+        try:
+            mock_create_webroot.return_value = "/var/www/defaultns.com"
+            mock_create_static_site.return_value = "/etc/nginx/sites-available/defaultns.com.conf"
+
+            async with self.session_factory() as session:
+                domain = await domain_service.create(
+                    session,
+                    name="defaultns.com",
+                    project_type="static",
+                    ns_mode="panel_default",
+                )
+                await session.commit()
+
+                self.assertEqual(domain.name, "defaultns.com")
+                self.assertTrue(domain.dns_zone_created)
+                mock_create_zone.assert_awaited_once_with("defaultns.com")
+                mock_add_a_record.assert_awaited_once_with("defaultns.com", "@", unittest.mock.ANY)
+                mock_set_ns.assert_awaited_once_with("defaultns.com", ["ns1.srvpanel.net", "ns2.srvpanel.net"])
+        finally:
+            config.DEFAULT_NS1 = old_ns1
+            config.DEFAULT_NS2 = old_ns2
+
+    @patch("services.nginx_service.reload", new_callable=AsyncMock)
+    @patch("services.nginx_service.create_static_site", new_callable=AsyncMock)
+    @patch("services.nginx_service.create_webroot")
+    @patch("services.nginx_service.ensure_acme_root")
+    @patch("services.nginx_service.server_name_in_use", return_value=False)
+    @patch("services.dns_service.create_zone", new_callable=AsyncMock)
+    async def test_create_domain_manual_external_dns(
+        self,
+        mock_create_zone,
+        mock_server_name_in_use,
+        mock_ensure_acme_root,
+        mock_create_webroot,
+        mock_create_static_site,
+        mock_reload,
+    ):
+        mock_create_webroot.return_value = "/var/www/manualdns.com"
+        mock_create_static_site.return_value = "/etc/nginx/sites-available/manualdns.com.conf"
+
+        async with self.session_factory() as session:
+            domain = await domain_service.create(
+                session,
+                name="manualdns.com",
+                project_type="static",
+                ns_mode="manual",
+            )
+            await session.commit()
+
+            self.assertEqual(domain.name, "manualdns.com")
+            self.assertFalse(domain.dns_zone_created)
+            mock_create_zone.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

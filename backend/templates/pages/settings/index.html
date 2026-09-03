@@ -23,6 +23,7 @@
     <div class="split-sidebar__item active" data-tab="tab-access">{{ _('current_access') }}</div>
     <div class="split-sidebar__item" data-tab="tab-url">{{ _('panel_url') }}</div>
     <div class="split-sidebar__item" data-tab="tab-ip">{{ _('ip_access') }}</div>
+    <div class="split-sidebar__item" data-tab="tab-dns">{{ _('dns_nameservers') }}</div>
     <div class="split-sidebar__item" data-tab="tab-security">{{ _('security') }}</div>
     <div class="split-sidebar__item" data-tab="tab-perf">{{ _('performance') }}</div>
     <div class="split-sidebar__item" data-tab="tab-resource-guard">{{ _('resource_guard') }}</div>
@@ -209,6 +210,68 @@
         <div class="fixed-action-bar__inner">
           <div style="margin-left:auto;">
             <button type="button" class="btn btn--primary btn--sm" id="btn-save-ip">{{ _('save_ip_access') }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: DNS & NAMESERVERS -->
+    <div id="tab-dns" class="split-tab">
+      <div class="section mb-xl">
+        <div class="section__header"><h3>{{ _('default_nameservers') }}</h3></div>
+        <div class="section__body">
+          <p class="form-hint mb-md">{{ _('default_nameservers_desc') }}</p>
+
+          <div class="form-group mb-md">
+            <label class="form-label" for="default_ns1" style="font-size:12px;">{{ _('primary_nameserver') }}</label>
+            <input class="form-input" type="text" id="default_ns1" value="{{ s.default_ns1 or '' }}" placeholder="ns1.example.com" autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%;">
+          </div>
+
+          <div class="form-group mb-md">
+            <label class="form-label" for="default_ns2" style="font-size:12px;">{{ _('secondary_nameserver') }}</label>
+            <input class="form-input" type="text" id="default_ns2" value="{{ s.default_ns2 or '' }}" placeholder="ns2.example.com" autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%;">
+          </div>
+
+          <div class="form-group mb-lg">
+            <label class="form-label" for="default_ns3" style="font-size:12px;">{{ _('tertiary_nameserver_optional') }}</label>
+            <input class="form-input" type="text" id="default_ns3" value="{{ s.default_ns3 or '' }}" placeholder="ns3.example.com" autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%;">
+          </div>
+
+          <h4 class="mb-sm" style="font-size: 1rem; font-weight: 600;">{{ _('default_domain_dns_mode') }}</h4>
+          <div class="settings-choice-grid mb-md">
+            <label class="settings-choice {% if s.default_ns_mode == 'panel_default' or not s.default_ns_mode %}settings-choice--active{% endif %}">
+              <div class="settings-choice__header">
+                <input type="radio" name="default_ns_mode" value="panel_default" {% if s.default_ns_mode == 'panel_default' or not s.default_ns_mode %}checked{% endif %}>
+                <span class="settings-choice__title">{{ _('panel_nameservers') }}</span>
+              </div>
+              <span class="settings-choice__desc">{{ _('panel_nameservers_short_desc') }}</span>
+            </label>
+
+            <label class="settings-choice {% if s.default_ns_mode == 'child_ns' %}settings-choice--active{% endif %}">
+              <div class="settings-choice__header">
+                <input type="radio" name="default_ns_mode" value="child_ns" {% if s.default_ns_mode == 'child_ns' %}checked{% endif %}>
+                <span class="settings-choice__title">{{ _('child_nameservers') }}</span>
+              </div>
+              <span class="settings-choice__desc">{{ _('child_nameservers_short_desc') }}</span>
+            </label>
+
+            <label class="settings-choice {% if s.default_ns_mode == 'manual' %}settings-choice--active{% endif %}">
+              <div class="settings-choice__header">
+                <input type="radio" name="default_ns_mode" value="manual" {% if s.default_ns_mode == 'manual' %}checked{% endif %}>
+                <span class="settings-choice__title">{{ _('manual_external_dns') }}</span>
+              </div>
+              <span class="settings-choice__desc">{{ _('manual_external_short_desc') }}</span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-save-dns">{{ _('save_dns_settings') }}</button>
           </div>
         </div>
       </div>
