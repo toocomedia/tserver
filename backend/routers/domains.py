@@ -29,20 +29,106 @@ router = APIRouter(prefix="/domains", tags=["domains"])
 
 @router.post("/api/bulk")
 async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
-    """Generic endpoint for bulk operations on domains (e.g. bulk delete)."""
-    if payload.action.lower().strip() == "delete":
-        managed = (await db.execute(
-            select(PhpWebsite.id, PhpWebsite.domain_id).where(
-                PhpWebsite.domain_id.in_(payload.item_ids)
-            )
-        )).all()
-        if managed:
+    """Generic endpoint for bulk operations on domains (delete, issue_ssl, create_dns)."""
+    target_ids = payload.target_ids
+    if not target_ids:
+        return JSONResponse({"success": False, "processed": 0, "failed": 0, "message": "No domain IDs provided."}, status_code=400)
+
+    action = payload.action.lower().strip()
+    processed = 0
+    errors = []
+
+    if action == "delete":
+        # Guard: check if any domain is used by PHP websites or hosted apps
+        managed_php = (await db.execute(
+            select(PhpWebsite.domain_id).where(PhpWebsite.domain_id.in_(target_ids))
+        )).scalars().all()
+        if managed_php:
             raise HTTPException(
                 409,
-                "Remove managed PHP websites before bulk-deleting their domains.",
+                "Remove managed PHP websites before deleting their domains."
             )
-    result = await execute_bulk_action(db, Domain, payload.action, payload.item_ids)
-    return result
+
+        managed_apps = (await db.execute(
+            select(HostedApp.domain_id).where(HostedApp.domain_id.in_(target_ids))
+        )).scalars().all()
+        if managed_apps:
+            raise HTTPException(
+                409,
+                "Remove hosted applications before deleting their domains."
+            )
+
+        for domain_id in target_ids:
+            try:
+                await domain_service.delete(db, domain_id)
+                processed += 1
+            except Exception as e:
+                logger.error(f"Bulk delete error for domain {domain_id}: {e}")
+                errors.append(f"Domain #{domain_id}: {str(e)}")
+
+        await db.commit()
+
+        await task_manager_service.record_completed_task(
+            category="domain",
+            action="bulk_delete",
+            target_id="bulk",
+            label=f"Bulk Delete Domains ({processed})",
+            success=True,
+            message=f"Bulk deleted {processed} domain(s)."
+        )
+
+        return {
+            "success": len(errors) == 0 or processed > 0,
+            "processed": processed,
+            "failed": len(errors),
+            "message": f"Successfully deleted {processed} domain(s)." + (f" ({len(errors)} failed)" if errors else ""),
+            "errors": errors
+        }
+
+    elif action in ("issue_ssl", "ssl"):
+        from services import ssl_service
+        for domain_id in target_ids:
+            domain = await db.get(Domain, domain_id)
+            if not domain:
+                continue
+            try:
+                await ssl_service.issue_cert(db, full_domain=domain.name)
+                processed += 1
+            except Exception as e:
+                logger.error(f"Bulk SSL issuance failed for {domain.name}: {e}")
+                errors.append(f"{domain.name}: {str(e)}")
+
+        return {
+            "success": len(errors) == 0 or processed > 0,
+            "processed": processed,
+            "failed": len(errors),
+            "message": f"SSL issued for {processed} domain(s)." + (f" ({len(errors)} failed)" if errors else ""),
+            "errors": errors
+        }
+
+    elif action in ("create_dns", "dns"):
+        from services import dns_service
+        for domain_id in target_ids:
+            domain = await db.get(Domain, domain_id)
+            if not domain or domain.dns_zone_created:
+                continue
+            try:
+                await dns_service.create_zone(db, domain.name, domain.server_ip)
+                processed += 1
+            except Exception as e:
+                logger.error(f"Bulk DNS creation failed for {domain.name}: {e}")
+                errors.append(f"{domain.name}: {str(e)}")
+
+        return {
+            "success": len(errors) == 0 or processed > 0,
+            "processed": processed,
+            "failed": len(errors),
+            "message": f"DNS zone created for {processed} domain(s)." + (f" ({len(errors)} failed)" if errors else ""),
+            "errors": errors
+        }
+
+    return {"success": False, "processed": 0, "failed": len(target_ids), "message": f"Unsupported bulk action '{action}'."}
+
 
 
 

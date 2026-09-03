@@ -5,15 +5,19 @@ Routes call dns_service only — no direct PowerDNS calls here.
 """
 import logging
 from urllib.parse import quote
-from fastapi import APIRouter, Depends, Request, Form
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
 from services import dns_service, domain_service, dns_diagnostic_service
+from services.task_manager_service import task_manager_service
 from templating import templates
+from utils import powerdns
 import config
 
 logger = logging.getLogger(__name__)
@@ -288,6 +292,62 @@ async def dns_delete_record(
             f"/dns/{domain_name}/records?error={quote(error[:300])}",
             status_code=303,
         )
+
+
+class DnsRecordItem(BaseModel):
+    name: str
+    type: str
+    content: Optional[str] = None
+
+
+class BulkDeleteRecordsRequest(BaseModel):
+    records: List[DnsRecordItem]
+
+
+@router.post("/{domain_name}/records/bulk-delete")
+async def dns_bulk_delete_records(
+    domain_name: str,
+    payload: BulkDeleteRecordsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete multiple DNS records from a zone."""
+    domain = (await db.execute(
+        select(Domain).where(Domain.name == domain_name)
+    )).scalar_one_or_none()
+    if not domain:
+        raise HTTPException(404, "Domain not found.")
+
+    processed = 0
+    errors = []
+
+    for item in payload.records:
+        rtype = item.type.strip().upper()
+        if rtype == "SOA":
+            continue
+        clean_name = powerdns.normalize_record_name(item.name, domain_name)
+        try:
+            await dns_service.delete_record(domain_name, clean_name, rtype, content=item.content)
+            processed += 1
+        except Exception as exc:
+            logger.warning("Bulk delete record failed for %s (%s): %s", clean_name, rtype, exc)
+            errors.append(f"{clean_name} ({rtype}): {str(exc)}")
+
+    await task_manager_service.record_completed_task(
+        category="dns",
+        action="bulk_delete",
+        target_id=f"{domain_name}",
+        label=f"Bulk Delete DNS ({processed} records)",
+        success=True,
+        message=f"Bulk deleted {processed} record(s) from {domain_name}.",
+    )
+
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully deleted {processed} record(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 # ---------------------------------------------------------------

@@ -3,8 +3,8 @@ search_and_bulk.py — Reusable Backend Utilities for Search & Bulk Actions
 Provides generic query filtering and bulk action handlers across SQLAlchemy models.
 """
 
-from typing import List, Any, Type, Dict
-from pydantic import BaseModel, Field
+from typing import List, Any, Type, Dict, Optional
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import or_, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -13,8 +13,23 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 class BulkActionRequest(BaseModel):
     """Generic payload schema for bulk endpoint requests."""
-    item_ids: List[int] = Field(..., description="List of primary key IDs to operate on")
     action: str = Field(..., description="Bulk action name (e.g. 'delete', 'enable', 'disable', 'restart')")
+    item_ids: List[int] = Field(default_factory=list, description="List of primary key IDs to operate on")
+    ids: Optional[List[int]] = Field(default=None, description="Alias for item_ids")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_ids(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "ids" in data and not data.get("item_ids"):
+                data["item_ids"] = data["ids"]
+            elif "item_ids" in data and not data.get("ids"):
+                data["ids"] = data["item_ids"]
+        return data
+
+    @property
+    def target_ids(self) -> List[int]:
+        return self.item_ids or self.ids or []
 
 
 def apply_search_filter(query: Any, model: Type[Any], search_term: str, search_fields: List[InstrumentedAttribute]) -> Any:
@@ -60,7 +75,7 @@ async def execute_bulk_action(
     :return: Dict containing count of processed items and status summary
     """
     if not item_ids:
-        return {"success": False, "count": 0, "message": "No item IDs provided."}
+        return {"success": False, "count": 0, "processed": 0, "failed": 0, "message": "No item IDs provided."}
 
     # Fetch items matching IDs
     stmt = select(model).where(model.id.in_(item_ids))
@@ -68,7 +83,7 @@ async def execute_bulk_action(
     items = result.scalars().all()
 
     if not items:
-        return {"success": False, "count": 0, "message": "No matching items found."}
+        return {"success": False, "count": 0, "processed": 0, "failed": 0, "message": "No matching items found."}
 
     count = 0
     action = action_type.lower().strip()
@@ -78,7 +93,7 @@ async def execute_bulk_action(
             await db.delete(item)
             count += 1
         await db.commit()
-        return {"success": True, "count": count, "message": f"Successfully deleted {count} item(s)."}
+        return {"success": True, "count": count, "processed": count, "failed": 0, "message": f"Successfully deleted {count} item(s)."}
 
     elif action in ("enable", "active", "start"):
         for item in items:
@@ -89,7 +104,7 @@ async def execute_bulk_action(
                 setattr(item, "enabled", True)
                 count += 1
         await db.commit()
-        return {"success": True, "count": count, "message": f"Successfully enabled {count} item(s)."}
+        return {"success": True, "count": count, "processed": count, "failed": 0, "message": f"Successfully enabled {count} item(s)."}
 
     elif action in ("disable", "inactive", "stop"):
         for item in items:
@@ -100,6 +115,6 @@ async def execute_bulk_action(
                 setattr(item, "enabled", False)
                 count += 1
         await db.commit()
-        return {"success": True, "count": count, "message": f"Successfully disabled {count} item(s)."}
+        return {"success": True, "count": count, "processed": count, "failed": 0, "message": f"Successfully disabled {count} item(s)."}
 
-    return {"success": False, "count": 0, "message": f"Unsupported bulk action '{action_type}'."}
+    return {"success": False, "count": 0, "processed": 0, "failed": len(items), "message": f"Unsupported bulk action '{action_type}'."}

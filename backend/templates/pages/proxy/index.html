@@ -34,33 +34,34 @@
 
 {% if rows %}
 
-  <!-- Action Toolbar (Search & Filter) -->
-  <div class="action-toolbar">
-    <div class="action-toolbar__search">
-      <input type="text" id="proxy-search-input" class="form-control" placeholder="Search proxies by domain, target IP or port..." onkeyup="filterProxyTable()">
-    </div>
-    <div class="action-toolbar__group">
-      <select id="proxy-status-filter" class="form-control" style="width: 140px;" onchange="filterProxyTable()">
-        <option value="all">{{ _('all_proxies') }}</option>
-        <option value="ssl">{{ _('ssl_enabled') }}</option>
-        <option value="cache">{{ _('cache_enabled') }}</option>
-      </select>
-    </div>
-  </div>
+  {% set search_id = 'proxy-search-input' %}
+  {% set search_placeholder = 'Search proxies by domain, target IP or port...' %}
+  {% set filter_options = [
+    {'val': 'ssl', 'label': _('ssl_enabled')},
+    {'val': 'cache', 'label': _('cache_enabled')}
+  ] %}
+  {% set bulk_actions = [
+    {'action': 'delete', 'label': _('delete_selected')},
+    {'action': 'enable', 'label': _('enable_selected')},
+    {'action': 'disable', 'label': _('disable_selected')}
+  ] %}
+  {% include "partials/action_toolbar.html" %}
 
   <div class="table-wrap">
   <table class="table" id="proxy-table">
     <colgroup>
+      <col style="width:40px">
       <col style="width:22%">
       <col style="width:18%">
       <col style="width:8%">
       <col style="width:9%">
       <col style="width:9%">
       <col style="width:10%">
-      <col style="width:24%">
+      <col style="width:20%">
     </colgroup>
     <thead>
       <tr>
+        <th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="{{ _('select_all') }}"></th>
         <th>{{ _('subdomain') }}</th>
         <th>{{ _('target') }}</th>
         <th>{{ _('protocol') }}</th>
@@ -74,7 +75,7 @@
       {% for item in rows %}
       {% set p = item.proxy %}
       <tr id="proxy-row-{{ p.id }}" data-proxy-id="{{ p.id }}">
-
+        <td><input type="checkbox" class="bulk-select-item" value="{{ p.id }}" aria-label="{{ _('select_item') }}"></td>
         <td>
           <span class="table-title">{{ p.full_domain }}</span>
           <br>
@@ -201,14 +202,30 @@
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
 <script>
+let proxyBulkController = null;
+
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('proxy-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('proxy-skeleton');
+
+  if (typeof window.initBulkActionsTable === 'function') {
+    proxyBulkController = window.initBulkActionsTable({
+      tableId: 'proxy-table',
+      endpoint: '/proxy/api/bulk',
+      itemName: 'Reverse Proxy',
+      confirmDangerActions: ['delete']
+    });
+  }
+
+  const searchInput = document.getElementById('proxy-search-input');
+  const statusFilter = document.getElementById('status-filter-select') || document.getElementById('proxy-status-filter');
+  if (searchInput) searchInput.addEventListener('input', filterProxyTable);
+  if (statusFilter) statusFilter.addEventListener('change', filterProxyTable);
 });
 
 function filterProxyTable() {
-  const query = document.getElementById('proxy-search-input').value.toLowerCase().trim();
-  const filter = document.getElementById('proxy-status-filter').value;
+  const query = (document.getElementById('proxy-search-input')?.value || '').toLowerCase().trim();
+  const filter = (document.getElementById('status-filter-select') || document.getElementById('proxy-status-filter'))?.value || 'all';
   const rows = document.querySelectorAll('#proxy-table tbody tr[data-proxy-id]');
 
   rows.forEach(row => {
@@ -226,8 +243,14 @@ function filterProxyTable() {
       row.style.display = '';
     } else {
       row.style.display = 'none';
+      const cb = row.querySelector('.bulk-select-item');
+      if (cb) cb.checked = false;
     }
   });
+
+  if (proxyBulkController) {
+    proxyBulkController.updateState();
+  }
 }
 </script>
 {% endblock %}

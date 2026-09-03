@@ -27,9 +27,95 @@ router = APIRouter(prefix="/proxy", tags=["proxy"])
 
 @router.post("/api/bulk")
 async def proxy_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
-    """Generic endpoint for bulk operations on reverse proxies."""
-    result = await execute_bulk_action(db, ReverseProxy, payload.action, payload.item_ids)
-    return result
+    """Bulk operations on reverse proxies (delete, enable, disable)."""
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No proxy IDs provided."}
+
+    action = payload.action.lower().strip()
+    processed = 0
+    errors = []
+
+    if action == "delete":
+        from services import cascade_service
+        for proxy_id in target_ids:
+            proxy = await db.get(ReverseProxy, proxy_id)
+            if not proxy:
+                continue
+            try:
+                domain_name = ""
+                if proxy.domain_id:
+                    domain = await db.scalar(select(Domain).where(Domain.id == proxy.domain_id))
+                    domain_name = domain.name if domain else ""
+                if not domain_name and proxy.full_domain and "." in proxy.full_domain:
+                    domain_name = proxy.full_domain.split(".", 1)[-1]
+                await cascade_service.delete_reverse_proxy_full(db, proxy, domain_name)
+                processed += 1
+            except Exception as e:
+                logger.error(f"Bulk delete error for proxy {proxy_id}: {e}")
+                errors.append(f"Proxy #{proxy_id}: {str(e)}")
+
+        await db.commit()
+
+        await task_manager_service.record_completed_task(
+            category="proxy",
+            action="bulk_delete",
+            target_id="bulk",
+            label=f"Bulk Delete Proxies ({processed})",
+            success=True,
+            message=f"Bulk deleted {processed} reverse proxy(ies)."
+        )
+
+        return {
+            "success": len(errors) == 0 or processed > 0,
+            "processed": processed,
+            "failed": len(errors),
+            "message": f"Successfully deleted {processed} proxy(ies)." + (f" ({len(errors)} failed)" if errors else ""),
+            "errors": errors
+        }
+
+    elif action in ("enable", "active"):
+        for proxy_id in target_ids:
+            proxy = await db.get(ReverseProxy, proxy_id)
+            if not proxy:
+                continue
+            try:
+                if proxy.full_domain:
+                    await nginx_service.enable_site(f"proxy_{proxy.full_domain}")
+                    await nginx_service.reload()
+                processed += 1
+            except Exception as e:
+                errors.append(f"{proxy.full_domain}: {str(e)}")
+        return {
+            "success": len(errors) == 0 or processed > 0,
+            "processed": processed,
+            "failed": len(errors),
+            "message": f"Enabled {processed} proxy(ies)." + (f" ({len(errors)} failed)" if errors else ""),
+            "errors": errors
+        }
+
+    elif action in ("disable", "inactive"):
+        for proxy_id in target_ids:
+            proxy = await db.get(ReverseProxy, proxy_id)
+            if not proxy:
+                continue
+            try:
+                if proxy.full_domain:
+                    await nginx_service.disable_site(f"proxy_{proxy.full_domain}")
+                    await nginx_service.reload()
+                processed += 1
+            except Exception as e:
+                errors.append(f"{proxy.full_domain}: {str(e)}")
+        return {
+            "success": len(errors) == 0 or processed > 0,
+            "processed": processed,
+            "failed": len(errors),
+            "message": f"Disabled {processed} proxy(ies)." + (f" ({len(errors)} failed)" if errors else ""),
+            "errors": errors
+        }
+
+    return {"success": False, "processed": 0, "failed": len(target_ids), "message": f"Unsupported bulk action '{action}'."}
+
 
 
 

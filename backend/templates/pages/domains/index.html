@@ -18,32 +18,34 @@
 
 {% if domain_statuses %}
 
-<!-- Action Toolbar (Search & Filter) -->
-  <div class="action-toolbar">
-    <div class="action-toolbar__search">
-      <input type="text" id="domain-search-input" class="form-control" placeholder="Search domains by name or IP..." onkeyup="filterDomainsTable()">
-    </div>
-    <div class="action-toolbar__group">
-      <select id="domain-status-filter" class="form-control" style="width: 140px;" onchange="filterDomainsTable()">
-        <option value="all">{{ _('all_domains') }}</option>
-        <option value="active">{{ _('active_nginx') }}</option>
-        <option value="ssl">{{ _('ssl_issued') }}</option>
-      </select>
-    </div>
-  </div>
+  {% set search_id = 'domain-search-input' %}
+  {% set search_placeholder = 'Search domains by name or IP...' %}
+  {% set filter_options = [
+    {'val': 'active', 'label': _('active_nginx')},
+    {'val': 'ssl', 'label': _('ssl_issued')}
+  ] %}
+  {% set bulk_actions = [
+    {'action': 'delete', 'label': _('delete_selected')},
+    {'action': 'issue_ssl', 'label': _('issue_ssl_selected')},
+    {'action': 'create_dns', 'label': _('create_dns_selected')}
+  ] %}
+  {% include "partials/action_toolbar.html" %}
 
   <div class="table-wrap">
     <table class="table" id="domains-table">
       <colgroup>
-        <col style="width:26%">
+        <col style="width:40px">
+        <col style="width:24%">
         <col style="width:14%">
-        <col style="width:14%">
-        <col style="width:14%">
-        <col style="width:14%">
-        <col style="width:18%">
+        <col style="width:13%">
+        <col style="width:13%">
+        <col style="width:13%">
+        <col style="width:13%">
+        <col style="width:16%">
       </colgroup>
       <thead>
         <tr>
+          <th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="{{ _('select_all') }}"></th>
           <th>{{ _('domain') }}</th>
           <th>{{ _('type') }}</th>
           <th>{{ _('ip') }}</th>
@@ -56,6 +58,7 @@
       <tbody>
         {% for item in domain_statuses %}
         <tr data-domain-id="{{ item.domain.id }}" class="domain-row-item">
+          <td><input type="checkbox" class="bulk-select-item" value="{{ item.domain.id }}" aria-label="{{ _('select_item') }}"></td>
           <td>
             <span class="domain-name-txt table-title">{{ item.domain.name }}</span>
           </td>
@@ -151,14 +154,30 @@
 
 {% block scripts %}
 <script>
+let domainsBulkController = null;
+
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('domains-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('domains-skeleton');
+
+  if (typeof window.initBulkActionsTable === 'function') {
+    domainsBulkController = window.initBulkActionsTable({
+      tableId: 'domains-table',
+      endpoint: '/domains/api/bulk',
+      itemName: 'Domain',
+      confirmDangerActions: ['delete']
+    });
+  }
+
+  const searchInput = document.getElementById('domain-search-input');
+  const statusFilter = document.getElementById('status-filter-select') || document.getElementById('domain-status-filter');
+  if (searchInput) searchInput.addEventListener('input', filterDomainsTable);
+  if (statusFilter) statusFilter.addEventListener('change', filterDomainsTable);
 });
 
 function filterDomainsTable() {
-  const query = document.getElementById('domain-search-input').value.toLowerCase().trim();
-  const filter = document.getElementById('domain-status-filter').value;
+  const query = (document.getElementById('domain-search-input')?.value || '').toLowerCase().trim();
+  const filter = (document.getElementById('status-filter-select') || document.getElementById('domain-status-filter'))?.value || 'all';
   const rows = document.querySelectorAll('.domain-row-item');
   let visibleCount = 0;
 
@@ -178,8 +197,14 @@ function filterDomainsTable() {
       visibleCount++;
     } else {
       row.style.display = 'none';
+      const cb = row.querySelector('.bulk-select-item');
+      if (cb) cb.checked = false;
     }
   });
+
+  if (domainsBulkController) {
+    domainsBulkController.updateState();
+  }
 
   const countLabel = document.getElementById('domain-count-label');
   if (countLabel) {

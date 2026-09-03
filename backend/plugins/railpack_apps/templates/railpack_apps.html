@@ -62,6 +62,16 @@
 <script type="module" src="/plugins/railpack_apps/static/js/railpack-app-orphan-recovery.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  let bulkController = null;
+  if (typeof window.initBulkActionsTable === 'function') {
+    bulkController = window.initBulkActionsTable({
+      tableId: 'apps-table',
+      endpoint: '/plugins/railpack_apps/bulk',
+      itemName: 'App',
+      confirmDangerActions: ['delete']
+    });
+  }
+
   // Filter logic
   function filterAppsTable() {
     const query = (document.getElementById('table-search-input')?.value || '').toLowerCase().trim();
@@ -85,118 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cb) cb.checked = false;
       }
     });
-    updateBulkState();
+
+    if (bulkController) {
+      bulkController.updateState();
+    }
   }
 
   document.getElementById('table-search-input')?.addEventListener('keyup', filterAppsTable);
   document.getElementById('status-filter-select')?.addEventListener('change', filterAppsTable);
-
-  // Bulk Actions Logic
-  const selectAll = document.getElementById('bulk-select-all');
-  const itemCheckboxes = document.querySelectorAll('.bulk-select-item');
-  const bulkSelect = document.getElementById('bulk-action-select');
-  const bulkBtn = document.getElementById('bulk-action-apply-btn');
-
-  function updateBulkState() {
-    const anyChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
-    if (bulkSelect) bulkSelect.disabled = !anyChecked;
-    if (bulkBtn) bulkBtn.disabled = !anyChecked || !bulkSelect.value;
-    
-    // Update select-all indeterminate state
-    if (selectAll) {
-      const allVisible = Array.from(itemCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
-      const checkedCount = allVisible.filter(cb => cb.checked).length;
-      selectAll.checked = checkedCount > 0 && checkedCount === allVisible.length;
-      selectAll.indeterminate = checkedCount > 0 && checkedCount < allVisible.length;
-    }
-  }
-
-  if (selectAll) {
-    selectAll.addEventListener('change', (e) => {
-      itemCheckboxes.forEach(cb => {
-        // Only select visible items
-        if (cb.closest('tr').style.display !== 'none') {
-          cb.checked = e.target.checked;
-        }
-      });
-      updateBulkState();
-    });
-  }
-
-  itemCheckboxes.forEach(cb => {
-    cb.addEventListener('change', updateBulkState);
-  });
-
-  if (bulkSelect) {
-    bulkSelect.addEventListener('change', updateBulkState);
-  }
-
-  if (bulkBtn) {
-    bulkBtn.addEventListener('click', () => {
-      const action = bulkSelect.value;
-      const selectedIds = Array.from(itemCheckboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
-      
-      if (!action || selectedIds.length === 0) return;
-
-      const isDelete = action === 'delete';
-      const confirmMsg = isDelete
-        ? `Are you sure you want to permanently delete ${selectedIds.length} app(s) and all their associated data?`
-        : `Are you sure you want to ${action} ${selectedIds.length} app(s)?`;
-        
-      const executeBulkAction = async () => {
-        bulkBtn.disabled = true;
-        bulkBtn.textContent = 'Working...';
-        
-        try {
-          const res = await fetch(`/plugins/railpack_apps/bulk`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRF-Token': document.querySelector('[name="csrf_token"]')?.value || ''
-            },
-            body: JSON.stringify({ action, ids: selectedIds })
-          });
-          
-          if (res.ok) {
-            window.location.reload();
-          } else {
-            const errData = await res.json().catch(() => ({}));
-            const msg = errData.detail || 'Failed to execute bulk action.';
-            if (typeof window.toast === 'function') {
-              window.toast(msg, 'danger');
-            } else {
-              alert(msg);
-            }
-            bulkBtn.disabled = false;
-            bulkBtn.textContent = 'Apply';
-          }
-        } catch (err) {
-          if (typeof window.toast === 'function') {
-            window.toast(err.message || 'Operation failed', 'danger');
-          } else {
-            alert(err.message);
-          }
-          bulkBtn.disabled = false;
-          bulkBtn.textContent = 'Apply';
-        }
-      };
-
-      if (typeof window.confirmAction === 'function') {
-        window.confirmAction(
-          confirmMsg,
-          executeBulkAction,
-          {
-            danger: isDelete,
-            title: isDelete ? 'Bulk Delete Apps' : `Bulk ${action.charAt(0).toUpperCase() + action.slice(1)} Apps`,
-            okLabel: isDelete ? `Delete ${selectedIds.length} Apps` : 'Apply',
-            itemName: `${selectedIds.length} Selected Apps`
-          }
-        );
-      } else if (confirm(confirmMsg)) {
-        executeBulkAction();
-      }
-    });
-  }
 });
 </script>
 {% endblock %}

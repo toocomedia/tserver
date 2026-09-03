@@ -23,8 +23,78 @@ from services import app_hosting_service as apps
 from services import app_update_service, ssl_service
 from dependencies.git import repository_service
 from templating import templates
+from utils.search_and_bulk import BulkActionRequest
 
 router = APIRouter(prefix="/apps", tags=["apps"])
+
+
+@router.post("/api/bulk")
+async def apps_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Bulk start, stop, restart, or delete Python apps."""
+    if payload.action not in ["start", "stop", "restart", "delete", "uninstall"]:
+        raise HTTPException(400, f"Invalid app bulk action '{payload.action}'.")
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No app IDs provided."}
+
+    apps_list = (await db.scalars(select(HostedApp).where(HostedApp.id.in_(target_ids)))).all()
+    if not apps_list:
+        return {"success": True, "processed": 0, "failed": 0, "message": "No matching apps found."}
+
+    action = payload.action.lower().strip()
+    processed = 0
+    errors = []
+
+    for app in apps_list:
+        domain = await db.get(Domain, app.domain_id)
+        if action in ("delete", "uninstall"):
+            try:
+                await app_deployment_service.cancel(db, app)
+                await app_lifecycle_service.cancel_deployment(app.id)
+                await app_lifecycle_service.run(
+                    app.id,
+                    lambda: app_cleanup_service.uninstall(
+                        app, domain.name if domain else None,
+                        delete_database=False,
+                        db=db,
+                    ),
+                    wait=True,
+                )
+                await db.execute(delete(AppDeployment).where(AppDeployment.app_id == app.id))
+                await db.execute(delete(AppEnvironmentVariable).where(AppEnvironmentVariable.app_id == app.id))
+                await db.delete(app)
+                processed += 1
+            except Exception as exc:
+                errors.append(f"{app.service_name}: {str(exc)}")
+        else:
+            if app.status in {"deleting", "delete_failed"}:
+                continue
+            if not domain:
+                errors.append(f"{app.service_name}: Domain missing")
+                continue
+            try:
+                if action == "stop":
+                    await app_deployment_service.cancel(db, app)
+                    await app_lifecycle_service.cancel_deployment(app.id)
+                    await app_lifecycle_service.run(app.id, lambda: app_dependency_service.stop_app(db, app, domain))
+                elif action == "start":
+                    await app_deployment_service.ensure_idle(db, app.id)
+                    await app_lifecycle_service.run(app.id, lambda: app_dependency_service.start_app(db, app, domain))
+                elif action == "restart":
+                    await app_deployment_service.ensure_idle(db, app.id)
+                    await app_lifecycle_service.run(app.id, lambda: _restart_app(db, app, domain))
+                processed += 1
+            except Exception as exc:
+                errors.append(f"{app.service_name}: {str(exc)}")
+
+    await db.commit()
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully executed {action} on {processed} app(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 @router.get("/", response_class=HTMLResponse)

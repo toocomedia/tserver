@@ -46,21 +46,26 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
     })
 
 
-class BulkActionRequest(BaseModel):
-    action: str
-    ids: list[int]
+from utils.search_and_bulk import BulkActionRequest
 
 
 @router.post("/bulk")
 async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)):
     if req.action not in ["start", "stop", "restart", "delete"]:
         raise HTTPException(400, "Invalid bulk action.")
-    apps = (await db.scalars(select(ContainerApp).where(ContainerApp.id.in_(req.ids)))).all()
+    target_ids = req.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No app IDs provided."}
+
+    apps = (await db.scalars(select(ContainerApp).where(ContainerApp.id.in_(target_ids)))).all()
     if not apps:
-        return JSONResponse({"status": "ok"})
+        return {"success": True, "processed": 0, "failed": 0, "message": "No matching apps found."}
     
     from services import container_app_control_service, container_app_cleanup_service, container_app_removal_service
     from services.resource_guard_service import resource_guard_service
+
+    processed = 0
+    errors = []
 
     for app in apps:
         domain = await db.get(Domain, app.domain_id)
@@ -82,26 +87,37 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
                 await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
                 await db.execute(delete(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id))
                 await db.delete(app)
-            except Exception:
+                processed += 1
+            except Exception as e:
                 app.status = "delete_failed"
                 await db.commit()
+                errors.append(f"{app.container_name}: {str(e)}")
         else:
             if app.status in {"deleting", "delete_failed", "data_preserved"}:
                 continue
             if req.action != "stop":
                 try:
                     await resource_guard_service.allow_start(db)
-                except RuntimeError:
+                except RuntimeError as e:
+                    errors.append(f"{app.container_name}: {str(e)}")
                     continue
             try:
                 await container_app_control_service.control(db, app, domain, req.action)
-            except Exception:
+                processed += 1
+            except Exception as e:
                 if req.action != "stop":
                     app.status = "failed"
                     await db.commit()
+                errors.append(f"{app.container_name}: {str(e)}")
     
     await db.commit()
-    return JSONResponse({"status": "ok"})
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully executed {req.action} on {processed} app(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 router.include_router(create_router)
