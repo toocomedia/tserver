@@ -10,6 +10,5 @@ from plugins.external_dns.providers import registry   # noqa: F401
 
 # --- Adapter modules (import order does not matter) ---
 from plugins.external_dns.providers import hetzner    # noqa: F401,E402
-from plugins.external_dns.providers import wix        # noqa: F401,E402
 
-__all__ = ["base", "registry", "hetzner", "wix"]
+__all__ = ["base", "registry", "hetzner"]
