@@ -461,6 +461,35 @@
       });
     }
 
+    // Font family toggle logic
+    const fontRadios = document.querySelectorAll('input[name="font_family"]');
+    if (fontRadios.length) {
+      const savedFont = localStorage.getItem("panel_font") || "onest";
+      fontRadios.forEach(radio => {
+        if (radio.value === savedFont) {
+          radio.checked = true;
+          const card = radio.closest('.settings-choice');
+          if (card) card.classList.add('settings-choice--active');
+        }
+
+        radio.addEventListener("change", (e) => {
+          if (e.target.checked) {
+            fontRadios.forEach(r => {
+              const card = r.closest('.settings-choice');
+              if (card) card.classList.toggle('settings-choice--active', r.checked);
+            });
+            const val = e.target.value;
+            localStorage.setItem("panel_font", val);
+            if (val && val !== "onest") {
+              document.documentElement.setAttribute("data-font", val);
+            } else {
+              document.documentElement.removeAttribute("data-font");
+            }
+          }
+        });
+      });
+    }
+
     document.querySelectorAll('input[name="url_mode"]').forEach((el) => {
       el.addEventListener("change", syncUrlModeUi);
     });

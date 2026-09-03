@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% from "partials/empty_state.html" import empty_state %}
+
+{% block title %}{{ _('ext_dns_title') }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ _('ext_dns_title') }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/dns/" class="btn btn--secondary" id="ext-dns-back">{{ _('all_zones_1') }}</a>
+{% endblock %}
+
+{% block content %}
+{# Map provider id → localized label without shadowing the `_` translation fn #}
+{% set provider_labels = {} %}
+{% for p in providers %}{% set _u = provider_labels.update({p.id: _(p.label_key)}) %}{% endfor %}
+
+<div class="ext-dns-page">
+  <p class="text-muted mb-lg">{{ _('ext_dns_page_desc') }}</p>
+
+  {% if bindings %}
+  <div class="table-wrap">
+    <table class="table" id="ext-dns-table">
+      <colgroup>
+        <col style="width:30%"><col style="width:18%"><col style="width:22%"><col style="width:14%"><col style="width:16%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ _('ext_dns_domain') }}</th>
+          <th>{{ _('ext_dns_provider') }}</th>
+          <th>{{ _('ext_dns_zone_ref') }}</th>
+          <th>{{ _('status') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bindings %}
+        <tr id="ext-dns-row-{{ loop.index }}">
+          <td class="table-title">{{ b.domain }}</td>
+          <td><span class="badge badge--neutral">{{ provider_labels.get(b.provider, b.provider) }}</span></td>
+          <td class="text-small text-muted truncate" title="{{ b.zone_ref }}">{{ b.zone_ref }}</td>
+          <td>
+            {% if b.status == 'active' %}
+              <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
+            {% else %}
+              <span class="badge-minimal badge-minimal--danger" title="{{ b.last_error or '' }}">{{ _('ext_dns_status_error') }}</span>
+            {% endif %}
+          </td>
+          <td class="col-actions">
+            <div class="d-flex gap-sm" style="justify-content:flex-end;">
+              <a href="/dns/{{ b.domain }}/records" class="btn btn--secondary btn--sm">{{ _('ext_dns_manage_records') }}</a>
+              <button type="button" class="btn btn--danger btn--sm ext-dns-unbind" data-domain="{{ b.domain }}">{{ _('ext_dns_disconnect') }}</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty_state(
+    icon='network',
+    title=_('ext_dns_no_bindings'),
+    desc=_('ext_dns_no_bindings_desc'),
+    action_url='/dns/',
+    action_label=_('dns_manager'),
+    action_icon='arrow-right',
+    id='ext-dns-empty'
+  ) }}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/plugins/external_dns/static/js/external_dns.js?v={{ APP_VERSION }}"></script>
+{% endblock %}

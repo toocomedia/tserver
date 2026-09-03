@@ -5,16 +5,28 @@
   <div class="php-cards-grid">
     <!-- DATABASES TABLE CARD -->
     <div class="php-card">
-      <div class="php-card__title has-table" style="margin-bottom: 0;">
-        <span>User Databases</span>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="pg-db-search-input" class="form-input pg-search-input" placeholder="Search databases..." oninput="onPgDbSearch(this.value)">
-        </div>
-      </div>
+      {% set bulk_endpoint = '/plugins/postgres_manager/api/bulk' %}
+      {% set bulk_table = 'pg-db-table' %}
+      {% set bulk_item_name = 'Database' %}
+      {% set search_placeholder = 'Search databases...' %}
+      {% set bulk_actions = [
+        {'action': 'delete', 'label': _('delete_selected')}
+      ] %}
+      {% include "partials/action_toolbar.html" %}
 
       <table class="table" id="pg-db-table" style="width: 100%; table-layout: fixed; margin-bottom: 0;">
+        <colgroup>
+          <col style="width: 40px;">
+          <col>
+          <col style="width: 140px;">
+          <col style="width: 100px;">
+          <col style="width: 90px;">
+          <col style="width: 90px;">
+          <col style="width: 140px;">
+        </colgroup>
         <thead>
           <tr>
+            <th style="padding: 8px 12px; width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="{{ _('select_all') }}"></th>
             <th style="padding: 8px 12px;">Database Name</th>
             <th style="padding: 8px 12px; width: 140px;">Owner</th>
             <th style="padding: 8px 12px; width: 100px;">Encoding</th>
@@ -27,6 +39,7 @@
           {% if databases %}
             {% for db in databases %}
             <tr data-db="{{ db.name }}">
+              <td><input type="checkbox" class="bulk-select-item" value="{{ db.name }}" aria-label="Select {{ db.name }}"></td>
               <td class="table-title">
                 <strong>{{ db.name }}</strong>
               </td>
@@ -53,7 +66,7 @@
             {% endfor %}
           {% else %}
             <tr id="pg-db-empty-row">
-              <td colspan="6" class="text-muted" style="text-align: center; padding: var(--space-xl);">
+              <td colspan="7" class="text-muted" style="text-align: center; padding: var(--space-xl);">
                 No databases found. Create one using the "+ Create Database" button above.
               </td>
             </tr>

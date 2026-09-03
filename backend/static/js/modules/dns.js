@@ -201,10 +201,11 @@ window.runDnsDiagnostics = async function(domain) {
 /**
  * Submit an AJAX POST for deletion and remove row live
  */
-async function postDeleteRecord(btn, domain, name, type, content) {
+async function postDeleteRecord(btn, domain, name, type, content, recordId) {
   try {
     const payload = { name, type };
     if (content) payload.content = content;
+    if (recordId) payload.record_id = recordId;
     const csrfToken = typeof getCsrfToken === "function" ? getCsrfToken() : "";
     const res = await fetch(`/dns/${encodeURIComponent(domain)}/records/delete`, {
       method: "POST",
@@ -248,6 +249,7 @@ function bindDeleteButtons() {
       const name = btn.getAttribute("data-name") || "";
       const type = btn.getAttribute("data-type") || "";
       const content = btn.getAttribute("data-content") || "";
+      const recordId = btn.getAttribute("data-id") || "";
 
       if (!domain || !name || !type) {
         if (typeof toast === "function") toast("Missing record data for delete", "danger");
@@ -266,7 +268,7 @@ function bindDeleteButtons() {
         async () => {
           btn.disabled = true;
           btn.textContent = "…";
-          await postDeleteRecord(btn, domain, name, type, content);
+          await postDeleteRecord(btn, domain, name, type, content, recordId);
         },
         { danger: true, title: "Delete Record", okLabel: "Delete Record", itemName: name }
       );
@@ -361,7 +363,8 @@ function bindBulkDeleteRecords() {
       const records = checked.map(c => ({
         name: c.getAttribute("data-name"),
         type: c.getAttribute("data-type"),
-        content: c.getAttribute("data-content")
+        content: c.getAttribute("data-content"),
+        id: c.getAttribute("data-id") || undefined
       }));
       const domain = typeof CURRENT_DOMAIN !== "undefined" ? CURRENT_DOMAIN : "";
 

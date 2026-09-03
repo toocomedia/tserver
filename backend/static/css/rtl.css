@@ -106,7 +106,7 @@
 html[dir="rtl"] {
   direction: rtl;
   text-align: right;
-  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Bahij', 'ArabicFont', var(--font-sans, 'Onest', system-ui, -apple-system, sans-serif);
   line-height: 1.5;
   font-synthesis: weight style;
   -webkit-font-smoothing: antialiased;
@@ -114,7 +114,7 @@ html[dir="rtl"] {
 }
 
 html[dir="rtl"] body {
-  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Bahij', 'ArabicFont', var(--font-sans, 'Onest', system-ui, -apple-system, sans-serif);
   font-size: var(--font-body, 14px);
   line-height: 1.5;
   font-weight: 400;
@@ -146,7 +146,7 @@ html[dir="rtl"] .table-title,
 html[dir="rtl"] .settings-choice__title,
 html[dir="rtl"] .panel__header h3,
 html[dir="rtl"] .info-hero-row__title {
-  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Bahij', 'ArabicFont', var(--font-sans, 'Onest', system-ui, -apple-system, sans-serif);
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: normal;

@@ -21,6 +21,8 @@ from plugins.postgres_manager import queries as pg
 from plugins.postgres_manager.schemas import (
     DatabaseCreate, UserCreate, PasswordChange, QueryRequest, RemoteConfigRequest,
 )
+from services.task_manager_service import task_manager_service
+from utils.search_and_bulk import BulkActionRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/plugins/postgres_manager", tags=["postgres_manager"])
@@ -90,6 +92,44 @@ async def api_create_database(body: DatabaseCreate):
         return JSONResponse({"status": "ok", "name": body.name})
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/api/bulk")
+async def postgres_bulk_action(payload: BulkActionRequest):
+    """Bulk delete PostgreSQL databases."""
+    if payload.action not in ["delete"]:
+        raise HTTPException(400, f"Invalid bulk action '{payload.action}'.")
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No database names provided."}
+
+    processed = 0
+    errors = []
+
+    for db_name in target_ids:
+        db_name_str = str(db_name)
+        try:
+            pg.drop_database(db_name_str)
+            processed += 1
+        except Exception as exc:
+            errors.append(f"DB '{db_name_str}': {str(exc)}")
+
+    await task_manager_service.record_completed_task(
+        category="postgres",
+        action=f"bulk_{payload.action}",
+        target_id="bulk",
+        label=f"Bulk Delete PostgreSQL Databases ({processed})",
+        success=len(errors) == 0 or processed > 0,
+        message=f"Bulk dropped {processed} PostgreSQL database(s)."
+    )
+
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully dropped {processed} database(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 @router.delete("/api/databases/{name}")

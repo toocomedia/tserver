@@ -989,6 +989,10 @@
   "panel_php_tools": "أدوات PHP للوحة",
   "panel_php_tools_desc": "أدوات سطر الأوامر التي تتطلبها ميزات اللوحة وأطر عمل PHP الحديثة.",
   "binary_path": "مسار الملف التنفيذي",
-  "not_installed": "غير مثبت",
-  "no_php_installed": "لا يوجد إصدار PHP مثبت"
+  "no_php_installed": "لا يوجد إصدار PHP مثبت",
+  "font_family": "نوع الخط",
+  "current_font": "الحالي (Onest)",
+  "current_font_desc": "خط هندسي واضح ونظيف (الافتراضي)",
+  "inter_font_desc": "خط شائع مُحسَّن لشاشات العرض",
+  "instrument_sans_desc": "خط عصري ومعبّر بنمط غروتسك"
 }

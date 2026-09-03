@@ -409,6 +409,43 @@
               <span class="settings-choice__desc">{{ _('half_transparent_gradient_to_right') }}</span>
             </label>
           </div>
+
+          <h4 class="mb-sm" style="margin-top: 1.5rem; font-size: 1rem; font-weight: 600;">{{ _('font_family') }}</h4>
+          <div class="settings-choice-grid mb-md" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <label class="settings-choice" style="font-family: 'Onest', sans-serif;">
+              <div class="settings-choice__header">
+                <input type="radio" name="font_family" value="onest">
+                <span class="settings-choice__title">{{ _('current_font') }}</span>
+              </div>
+              <span class="settings-choice__desc">{{ _('current_font_desc') }}</span>
+              <div class="settings-choice__font-preview">
+                <div class="font-preview-letters">Aa Bb Gg 123</div>
+                <div class="font-preview-phrase">The quick brown fox jumps</div>
+              </div>
+            </label>
+            <label class="settings-choice" style="font-family: 'Inter', sans-serif;">
+              <div class="settings-choice__header">
+                <input type="radio" name="font_family" value="inter">
+                <span class="settings-choice__title">Inter</span>
+              </div>
+              <span class="settings-choice__desc">{{ _('inter_font_desc') }}</span>
+              <div class="settings-choice__font-preview">
+                <div class="font-preview-letters">Aa Bb Gg 123</div>
+                <div class="font-preview-phrase">The quick brown fox jumps</div>
+              </div>
+            </label>
+            <label class="settings-choice" style="font-family: 'Instrument Sans', sans-serif;">
+              <div class="settings-choice__header">
+                <input type="radio" name="font_family" value="instrument-sans">
+                <span class="settings-choice__title">Instrument Sans</span>
+              </div>
+              <span class="settings-choice__desc">{{ _('instrument_sans_desc') }}</span>
+              <div class="settings-choice__font-preview">
+                <div class="font-preview-letters">Aa Bb Gg 123</div>
+                <div class="font-preview-phrase">The quick brown fox jumps</div>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
     </div>

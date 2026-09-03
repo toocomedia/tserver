@@ -39,38 +39,40 @@
 
 {% if cert_list %}
 
-  <!-- Action Toolbar (Search & Filter) -->
-  <div class="action-toolbar">
-    <div class="action-toolbar__search">
-      <input type="text" id="ssl-search-input" class="form-control" placeholder="Search certificates by domain name..." onkeyup="filterSSLTable()">
-    </div>
-    <div class="action-toolbar__group">
-      <select id="ssl-status-filter" class="form-control" style="width: 140px;" onchange="filterSSLTable()">
-        <option value="all">{{ _('all_certificates') }}</option>
-        <option value="valid">{{ _('valid_only') }}</option>
-        <option value="expiring">{{ _('expiring_soon') }}</option>
-      </select>
-    </div>
-  </div>
+  {% set bulk_endpoint = '/ssl/api/bulk' %}
+  {% set bulk_table = 'ssl-table' %}
+  {% set bulk_item_name = 'Certificate' %}
+  {% set search_placeholder = 'Search certificates by domain name...' %}
+  {% set filter_options = [
+    {'val': 'valid', 'label': _('valid_only')},
+    {'val': 'expiring', 'label': _('expiring_soon')}
+  ] %}
+  {% set bulk_actions = [
+    {'action': 'renew', 'label': 'Renew Selected'},
+    {'action': 'revoke', 'label': 'Revoke Selected'}
+  ] %}
+  {% include "partials/action_toolbar.html" %}
 
   <div class="table-wrap">
   <table class="table" id="ssl-table">
     <colgroup>
-      <col style="width:30%">
-      <col style="width:18%">
+      <col style="width:40px">
+      <col style="width:28%">
+      <col style="width:16%">
       <col style="width:12%">
-      <col style="width:14%">
       <col style="width:12%">
-      <col style="width:26%">
+      <col style="width:10%">
+      <col style="width:22%">
     </colgroup>
     <thead>
       <tr>
+        <th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="{{ _('select_all') }}"></th>
         <th>{{ _('domain') }}</th>
         <th>{{ _('expiry_date') }}</th>
         <th>{{ _('days_left') }}</th>
         <th>{{ _('status') }}</th>
         <th>{{ _('auto_renew') }}</th>
-        <th class="col-actions" style="width:26%;">{{ _('actions') }}</th>
+        <th class="col-actions" style="width:22%;">{{ _('actions') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -188,26 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   {% endif %}
 });
-
-function filterSSLTable() {
-  const query = (document.getElementById('ssl-search-input')?.value || '').toLowerCase().trim();
-  const filter = document.getElementById('ssl-status-filter')?.value || 'all';
-  const rows = document.querySelectorAll('#ssl-table tbody tr.cert-row-item');
-
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const matchesSearch = !query || text.includes(query);
-    
-    let matchesFilter = true;
-    if (filter === 'valid') {
-      matchesFilter = text.includes('valid') || text.includes('issued');
-    } else if (filter === 'expiring') {
-      matchesFilter = text.includes('expiring') || text.includes('expired');
-    }
-
-    row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
-  });
-}
 
 function revokeCert(id, domain) {
   confirmAction(

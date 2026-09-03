@@ -843,5 +843,10 @@
   "free_ram_cache": "RAM Önbelleğini Boşalt",
   "smart_flush_swap": "Akıllı Swap Temizleme",
   "free_ram_cache_tooltip": "Etkin olmayan çekirdek sayfa önbelleklerini güvenle boşaltır ve fiziksel RAM'i anında serbest bırakır.",
-  "smart_flush_swap_tooltip": "RAM önbelleğini temizler ve yeterli boş bellek varsa eski swap ayırmalarını güvenle temizler."
+  "smart_flush_swap_tooltip": "RAM önbelleğini temizler ve yeterli boş bellek varsa eski swap ayırmalarını güvenle temizler.",
+  "font_family": "Yazı Tipi",
+  "current_font": "Geçerli (Onest)",
+  "current_font_desc": "Temiz geometrik sans-serif (varsayılan)",
+  "inter_font_desc": "Ekran için optimize edilmiş popüler yazı tipi",
+  "instrument_sans_desc": "Modern ve etkileyici grotesk yazı tipi"
 }

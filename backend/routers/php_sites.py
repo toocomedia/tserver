@@ -16,7 +16,9 @@ from schemas import php_sites as schemas
 from services import php_site_laravel_service as laravel
 from services import php_site_runtime as runtime
 from services import php_site_service as service
+from services.task_manager_service import task_manager_service
 from templating import templates
+from utils.search_and_bulk import BulkActionRequest
 
 
 def require_php_active() -> None:
@@ -35,6 +37,61 @@ router = APIRouter(
 )
 
 page_router = APIRouter(prefix="/php-sites", tags=["php-site-pages"])
+
+
+@page_router.post("/api/bulk")
+@router.post("/bulk")
+async def php_sites_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Bulk delete, restart, start, or stop PHP websites."""
+    if payload.action not in ["delete", "restart", "start", "stop"]:
+        raise HTTPException(400, f"Invalid bulk action '{payload.action}'.")
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No website IDs provided."}
+
+    processed = 0
+    errors = []
+
+    for site_id in target_ids:
+        try:
+            site = await service.get_site(db, site_id)
+            if not site:
+                errors.append(f"Site #{site_id}: Not found")
+                continue
+            domain = await db.get(Domain, site.domain_id)
+            if not domain:
+                errors.append(f"Site #{site_id}: Domain missing")
+                continue
+
+            if payload.action == "delete":
+                await service.delete_site(
+                    db, site, f"DELETE {domain.name}", delete_database_data=True
+                )
+                processed += 1
+            elif payload.action in ["restart", "start", "stop"]:
+                await service.queue_action(db, site, payload.action)
+                processed += 1
+        except Exception as exc:
+            errors.append(f"Site #{site_id}: {str(exc)}")
+
+    await db.commit()
+
+    await task_manager_service.record_completed_task(
+        category="php_sites",
+        action=f"bulk_{payload.action}",
+        target_id="bulk",
+        label=f"Bulk {payload.action.title()} PHP Sites ({processed})",
+        success=len(errors) == 0 or processed > 0,
+        message=f"Bulk executed {payload.action} on {processed} PHP site(s)."
+    )
+
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully executed {payload.action} on {processed} site(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 def _php_page_redirect() -> RedirectResponse | None:

@@ -18,26 +18,27 @@
 
 {% if sites %}
 
-  <!-- Action Toolbar (Search & Filter) -->
-  <div class="action-toolbar">
-    <div class="action-toolbar__search">
-      <input type="text" id="php-search-input" class="form-control" placeholder="Search websites by domain or version..." onkeyup="filterPhpSitesTable()">
-    </div>
-    <div class="action-toolbar__group">
-      <select id="php-status-filter" class="form-control" style="width: 140px;" onchange="filterPhpSitesTable()">
-        <option value="all">All Websites</option>
-        <option value="wordpress">{{ _('wordpress') }}</option>
-        <option value="laravel">{{ _('laravel') }}</option>
-        <option value="filament">{{ _('filament') }}</option>
-        <option value="php">{{ _('plain_php') }}</option>
-        <option value="active">{{ _('active_1') }}</option>
-      </select>
-    </div>
-  </div>
+  {% set bulk_endpoint = '/php-sites/api/bulk' %}
+  {% set bulk_table = 'php-sites-table' %}
+  {% set bulk_item_name = 'Website' %}
+  {% set search_placeholder = 'Search websites by domain or version...' %}
+  {% set filter_options = [
+    {'val': 'wordpress', 'label': _('wordpress')},
+    {'val': 'laravel', 'label': _('laravel')},
+    {'val': 'filament', 'label': _('filament')},
+    {'val': 'php', 'label': _('plain_php')},
+    {'val': 'active', 'label': _('active_1')}
+  ] %}
+  {% set bulk_actions = [
+    {'action': 'restart', 'label': _('restart_selected')},
+    {'action': 'delete', 'label': _('delete_selected')}
+  ] %}
+  {% include "partials/action_toolbar.html" %}
 
   <div class="table-wrap">
     <table class="table" id="php-sites-table">
       <colgroup>
+        <col style="width:40px">
         <col style="width:28%">
         <col style="width:14%">
         <col style="width:12%">
@@ -47,6 +48,7 @@
       </colgroup>
       <thead>
         <tr>
+          <th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="{{ _('select_all') }}"></th>
           <th>{{ _('domain') }}</th>
           <th>{{ _('preset') }}</th>
           <th>{{ _('php_version') }}</th>
@@ -59,6 +61,7 @@
         {% for site in sites %}
         {% set is_active = site.status in ['active', 'ready', 'succeeded'] %}
         <tr data-site-id="{{ site.id }}" class="php-site-row-item" data-preset="{{ site.preset }}" data-status="{{ site.status }}">
+          <td><input type="checkbox" class="bulk-select-item" value="{{ site.id }}" aria-label="Select {{ site.domain.name if site.domain else site.id }}"></td>
           <td>
             <a href="{{ path('php_sites', site.id) }}" class="domain-name-txt table-title">{{ site.domain or '—' }}</a>
           </td>
@@ -143,33 +146,5 @@ document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('php-sites-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('php-sites-skeleton');
 });
-
-function filterPhpSitesTable() {
-  const query = (document.getElementById('php-search-input')?.value || '').toLowerCase().trim();
-  const filter = document.getElementById('php-status-filter')?.value || 'all';
-  const rows = document.querySelectorAll('.php-site-row-item');
-
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const matchesSearch = !query || text.includes(query);
-    const preset = row.dataset.preset;
-    const status = row.dataset.status;
-
-    let matchesFilter = true;
-    if (filter === 'wordpress') {
-      matchesFilter = preset === 'wordpress';
-    } else if (filter === 'laravel') {
-      matchesFilter = preset === 'laravel';
-    } else if (filter === 'filament') {
-      matchesFilter = preset === 'filament';
-    } else if (filter === 'php') {
-      matchesFilter = preset === 'php';
-    } else if (filter === 'active') {
-      matchesFilter = ['active', 'ready', 'succeeded'].includes(status);
-    }
-
-    row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
-  });
-}
 </script>
 {% endblock %}

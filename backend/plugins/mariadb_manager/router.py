@@ -11,7 +11,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from plugins.mariadb_manager.schemas import Confirmation, DatabaseCreate
 from plugins.mariadb_manager.service import mariadb_manager_service
+from services.task_manager_service import task_manager_service
 from templating import templates
+from utils.search_and_bulk import BulkActionRequest
 
 
 router = APIRouter(prefix="/plugins/mariadb_manager", tags=["mariadb_manager"])
@@ -81,6 +83,49 @@ async def create_database(body: DatabaseCreate, db: AsyncSession = Depends(get_d
         return JSONResponse(mariadb_manager_service.create_database(body.database, body.user), status_code=201)
     except RuntimeError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/api/bulk")
+async def mariadb_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Bulk delete MariaDB databases."""
+    _require_managed_mariadb()
+    if payload.action not in ["delete"]:
+        raise HTTPException(400, f"Invalid bulk action '{payload.action}'.")
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No database names provided."}
+
+    processed = 0
+    errors = []
+
+    for db_name in target_ids:
+        db_name_str = str(db_name)
+        owner = await db.scalar(select(PhpWebsiteDatabase).where(PhpWebsiteDatabase.database_name == db_name_str))
+        if owner:
+            errors.append(f"DB '{db_name_str}': Belongs to PHP website #{owner.site_id}")
+            continue
+        try:
+            mariadb_manager_service.drop_database(db_name_str)
+            processed += 1
+        except Exception as exc:
+            errors.append(f"DB '{db_name_str}': {str(exc)}")
+
+    await task_manager_service.record_completed_task(
+        category="mariadb",
+        action=f"bulk_{payload.action}",
+        target_id="bulk",
+        label=f"Bulk Delete MariaDB Databases ({processed})",
+        success=len(errors) == 0 or processed > 0,
+        message=f"Bulk dropped {processed} MariaDB database(s)."
+    )
+
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully dropped {processed} database(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 @router.delete("/api/databases/{database}")

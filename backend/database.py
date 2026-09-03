@@ -459,6 +459,25 @@ def _migrate_sync(sync_conn) -> None:
                 logger.info("Migrating ai_chat_sessions: add %s", col)
                 sync_conn.execute(text(f"ALTER TABLE ai_chat_sessions ADD COLUMN {col} {ddl}"))
 
+    # --- external_dns_bindings: External DNS Manager plugin ---
+    # create_all() already builds this table for the model; kept here as an
+    # idempotent guard so pre-existing panel DBs get it without a fresh create.
+    if "external_dns_bindings" not in tables:
+        logger.info("Creating external_dns_bindings table")
+        sync_conn.execute(text("""
+            CREATE TABLE external_dns_bindings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                domain_id INTEGER NOT NULL UNIQUE REFERENCES domains(id),
+                provider VARCHAR(32) NOT NULL,
+                zone_ref VARCHAR(255) NOT NULL,
+                credentials_encrypted TEXT NOT NULL,
+                status VARCHAR(16) NOT NULL DEFAULT 'active',
+                last_error TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+            )
+        """))
+
 
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
@@ -492,6 +511,7 @@ async def init_db():
     import models.php_website_operation  # noqa: F401
     import models.ai_helper  # noqa: F401
     import models.system_task  # noqa: F401
+    import models.external_dns  # noqa: F401
     async with engine.begin() as conn:
         await conn.execute(text("PRAGMA journal_mode=WAL"))
         await conn.execute(text("PRAGMA busy_timeout=30000"))

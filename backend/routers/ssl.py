@@ -16,9 +16,51 @@ from models.proxy import ReverseProxy
 from services import ssl_service, nginx_service
 from services.task_manager_service import task_manager_service
 from templating import templates
+from utils.search_and_bulk import BulkActionRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ssl", tags=["ssl"])
+
+
+@router.post("/api/bulk")
+async def ssl_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Bulk renew or revoke SSL certificates."""
+    if payload.action not in ["renew", "revoke"]:
+        raise HTTPException(400, f"Invalid bulk action '{payload.action}'.")
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No certificate IDs provided."}
+
+    processed = 0
+    errors = []
+
+    for cert_id in target_ids:
+        try:
+            if payload.action == "renew":
+                await ssl_service.renew_cert(db, cert_id)
+            elif payload.action == "revoke":
+                await ssl_service.revoke_cert(db, cert_id)
+            processed += 1
+        except Exception as exc:
+            err = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+            errors.append(f"Cert #{cert_id}: {err}")
+
+    await task_manager_service.record_completed_task(
+        category="ssl",
+        action=f"bulk_{payload.action}",
+        target_id="bulk",
+        label=f"Bulk {payload.action.title()} SSL ({processed})",
+        success=len(errors) == 0 or processed > 0,
+        message=f"Bulk executed {payload.action} on {processed} certificate(s)."
+    )
+
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully executed {payload.action} on {processed} certificate(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 async def _build_eligible(db: AsyncSession) -> list[dict]:

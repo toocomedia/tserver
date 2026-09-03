@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
-from services import dns_service, domain_service, dns_diagnostic_service
+from services import dns_service, domain_service, dns_diagnostic_service, external_dns_bridge
 from services.task_manager_service import task_manager_service
 from templating import templates
 from utils import powerdns
@@ -39,6 +39,28 @@ CONTENT_LABELS = {
 
 
 # ---------------------------------------------------------------
+# RESPONSE HELPERS (shared by PowerDNS + external provider paths)
+# ---------------------------------------------------------------
+def _wants_json(request: Request) -> bool:
+    return (
+        "application/json" in request.headers.get("accept", "")
+        or request.headers.get("x-requested-with") == "XMLHttpRequest"
+    )
+
+
+def _ok_response(request: Request, domain_name: str, message: str, payload: dict | None = None):
+    if _wants_json(request):
+        return {"status": "ok", "message": message, **(payload or {})}
+    return RedirectResponse(f"/dns/{domain_name}/records?success={quote(message)}", status_code=303)
+
+
+def _err_response(request: Request, domain_name: str, error: str):
+    if _wants_json(request):
+        return JSONResponse({"error": error}, status_code=400)
+    return RedirectResponse(f"/dns/{domain_name}/records?error={quote(error[:300])}", status_code=303)
+
+
+# ---------------------------------------------------------------
 # ZONES LIST
 # ---------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
@@ -47,6 +69,8 @@ async def dns_index(request: Request, db: AsyncSession = Depends(get_db)):
     domains = (await db.execute(
         select(Domain).order_by(Domain.name)
     )).scalars().all()
+
+    external_map = await external_dns_bridge.bindings_map(db)
 
     zones = []
     for domain in domains:
@@ -62,6 +86,7 @@ async def dns_index(request: Request, db: AsyncSession = Depends(get_db)):
             "zone_exists": domain.dns_zone_created,
             "parent_domain_match": parent.name if parent else None,
             "subdomain_prefix": prefix if parent else None,
+            "external_provider": external_map.get(domain.name),
         })
 
     return templates.TemplateResponse("pages/dns/index.html", {
@@ -80,7 +105,7 @@ async def dns_records(
     domain_name: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Show all DNS records for a zone. Records fetched live from PowerDNS."""
+    """Show all DNS records for a zone (live from PowerDNS, or from an external provider)."""
     domain = (await db.execute(
         select(Domain).where(Domain.name == domain_name)
     )).scalar_one_or_none()
@@ -93,20 +118,27 @@ async def dns_records(
         return RedirectResponse(f"/dns/{domain.parent_domain}/records", status_code=303)
 
     parent, prefix = await domain_service.find_parent_domain(db, domain.name)
-    records = await dns_service.list_records(domain_name)
+    external = await external_dns_bridge.view_context(db, domain_name)
 
-    # Flatten rrsets into individual record rows for the table
-    rows = []
-    for rrset in records:
-        for rec in rrset.get("records", []):
-            rows.append({
-                "name":    rrset["name"].rstrip("."),
-                "type":    rrset["type"],
-                "content": rec["content"],
-                "ttl":     rrset["ttl"],
-                "managed": True,
-            })
-    rows.sort(key=lambda r: (r["name"], r["type"]))
+    if external.get("bound"):
+        # Records come from the external provider (Wix, Hetzner, ...), not PowerDNS.
+        rows = external.get("rows", [])
+        record_types = external.get("supported_types") or RECORD_TYPES
+    else:
+        records = await dns_service.list_records(domain_name)
+        # Flatten rrsets into individual record rows for the table
+        rows = []
+        for rrset in records:
+            for rec in rrset.get("records", []):
+                rows.append({
+                    "name":    rrset["name"].rstrip("."),
+                    "type":    rrset["type"],
+                    "content": rec["content"],
+                    "ttl":     rrset["ttl"],
+                    "managed": True,
+                })
+        rows.sort(key=lambda r: (r["name"], r["type"]))
+        record_types = RECORD_TYPES
 
     return templates.TemplateResponse("pages/dns/records.html", {
         "request": request,
@@ -115,10 +147,11 @@ async def dns_records(
         "parent_domain_match": parent.name if parent else None,
         "subdomain_prefix": prefix if parent else None,
         "rows": rows,
-        "record_types": RECORD_TYPES,
+        "record_types": record_types,
         "content_labels": CONTENT_LABELS,
         "templates": config.DNS_TEMPLATES,
         "server_ip": config.SERVER_IP,
+        "external": external,
     })
 
 
@@ -194,8 +227,25 @@ async def dns_add_record(
     if not domain:
         return JSONResponse({"error": "Domain not found"}, status_code=404)
 
-    # Validate type
     rtype = type.strip().upper()
+
+    # External provider path (Wix, Hetzner, ...) — bypass PowerDNS entirely.
+    if await external_dns_bridge.is_bound(db, domain_name):
+        try:
+            row = await external_dns_bridge.add_record(db, domain_name, name, rtype, content, ttl)
+            await task_manager_service.record_completed_task(
+                category="dns", action="create",
+                target_id=f"{domain_name}:{row.get('name', name)}",
+                label=f"Add DNS: {row.get('name', name)} ({rtype})", success=True,
+                message=f"DNS record {row.get('name', name)} ({rtype}) added to {domain_name} (external).",
+            )
+            return _ok_response(request, domain_name, "Record added successfully", {"record": row})
+        except HTTPException as exc:
+            return _err_response(request, domain_name, str(exc.detail))
+        except Exception as exc:
+            return _err_response(request, domain_name, str(exc))
+
+    # Validate type
     if rtype not in RECORD_TYPES:
         return RedirectResponse(
             f"/dns/{domain_name}/records?error=Invalid+record+type",
@@ -235,6 +285,45 @@ async def dns_add_record(
 
 
 # ---------------------------------------------------------------
+# EDIT RECORD (external providers only)
+# ---------------------------------------------------------------
+@router.post("/{domain_name}/records/edit")
+async def dns_edit_record(
+    request: Request,
+    domain_name: str,
+    record_id: str = Form(...),
+    name: str = Form(...),
+    type: str = Form(...),
+    content: str = Form(...),
+    ttl: int = Form(3600),
+    db: AsyncSession = Depends(get_db),
+):
+    """Edit an existing record on an external provider (Hetzner PUT / Wix rewrite)."""
+    domain = (await db.execute(
+        select(Domain).where(Domain.name == domain_name)
+    )).scalar_one_or_none()
+    if not domain:
+        return JSONResponse({"error": "Domain not found"}, status_code=404)
+
+    if not await external_dns_bridge.is_bound(db, domain_name):
+        return _err_response(request, domain_name, "Editing is only supported for external DNS providers.")
+
+    rtype = type.strip().upper()
+    try:
+        row = await external_dns_bridge.update_record(db, domain_name, record_id, name, rtype, content, ttl)
+        await task_manager_service.record_completed_task(
+            category="dns", action="update", target_id=f"{domain_name}:{row.get('name', name)}",
+            label=f"Edit DNS: {row.get('name', name)} ({rtype})", success=True,
+            message=f"DNS record {row.get('name', name)} ({rtype}) updated on {domain_name} (external).",
+        )
+        return _ok_response(request, domain_name, "Record updated successfully", {"record": row})
+    except HTTPException as exc:
+        return _err_response(request, domain_name, str(exc.detail))
+    except Exception as exc:
+        return _err_response(request, domain_name, str(exc))
+
+
+# ---------------------------------------------------------------
 # DELETE RECORD
 # ---------------------------------------------------------------
 @router.post("/{domain_name}/records/delete")
@@ -244,6 +333,7 @@ async def dns_delete_record(
     name: str = Form(...),
     type: str = Form(...),
     content: str | None = Form(None),
+    record_id: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a specific DNS record (or single value) from a zone."""
@@ -256,6 +346,24 @@ async def dns_delete_record(
         return RedirectResponse("/dns/", status_code=303)
 
     rtype = type.strip().upper()
+
+    # External provider path — delete by opaque record id (name/type/content as hints).
+    if await external_dns_bridge.is_bound(db, domain_name):
+        if rtype == "SOA":
+            return _err_response(request, domain_name, "SOA records cannot be deleted")
+        try:
+            await external_dns_bridge.delete_record(db, domain_name, record_id or "", name, rtype, content or "")
+            await task_manager_service.record_completed_task(
+                category="dns", action="delete", target_id=f"{domain_name}:{name}",
+                label=f"Delete DNS: {name} ({rtype})", success=True,
+                message=f"DNS record {name} ({rtype}) deleted from {domain_name} (external).",
+            )
+            return _ok_response(request, domain_name, "Record deleted")
+        except HTTPException as exc:
+            return _err_response(request, domain_name, str(exc.detail))
+        except Exception as exc:
+            return _err_response(request, domain_name, str(exc))
+
     if rtype == "SOA":
         if "application/json" in request.headers.get("accept", ""):
             return JSONResponse({"error": "SOA records cannot be deleted"}, status_code=400)
@@ -298,6 +406,7 @@ class DnsRecordItem(BaseModel):
     name: str
     type: str
     content: Optional[str] = None
+    id: Optional[str] = None
 
 
 class BulkDeleteRecordsRequest(BaseModel):
@@ -317,6 +426,7 @@ async def dns_bulk_delete_records(
     if not domain:
         raise HTTPException(404, "Domain not found.")
 
+    external_bound = await external_dns_bridge.is_bound(db, domain_name)
     processed = 0
     errors = []
 
@@ -324,13 +434,18 @@ async def dns_bulk_delete_records(
         rtype = item.type.strip().upper()
         if rtype == "SOA":
             continue
-        clean_name = powerdns.normalize_record_name(item.name, domain_name)
         try:
-            await dns_service.delete_record(domain_name, clean_name, rtype, content=item.content)
+            if external_bound:
+                await external_dns_bridge.delete_record(
+                    db, domain_name, item.id or "", item.name, rtype, item.content or ""
+                )
+            else:
+                clean_name = powerdns.normalize_record_name(item.name, domain_name)
+                await dns_service.delete_record(domain_name, clean_name, rtype, content=item.content)
             processed += 1
         except Exception as exc:
-            logger.warning("Bulk delete record failed for %s (%s): %s", clean_name, rtype, exc)
-            errors.append(f"{clean_name} ({rtype}): {str(exc)}")
+            logger.warning("Bulk delete record failed for %s (%s): %s", item.name, rtype, exc)
+            errors.append(f"{item.name} ({rtype}): {str(exc)}")
 
     await task_manager_service.record_completed_task(
         category="dns",

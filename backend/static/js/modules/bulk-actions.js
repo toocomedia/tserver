@@ -88,8 +88,8 @@
         const action = bulkSelect?.value || '';
         const checked = getVisibleItemBoxes().filter(cb => cb.checked);
         const ids = checked.map(cb => {
-          const num = parseInt(cb.value, 10);
-          return isNaN(num) ? cb.value : num;
+          const v = cb.value;
+          return /^\d+$/.test(v) ? parseInt(v, 10) : v;
         });
 
         if (!action || !ids.length) return;

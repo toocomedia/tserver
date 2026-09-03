@@ -1,5 +1,6 @@
 {% set cert = item.cert %}
 <tr id="cert-row-{{ cert.id }}" class="cert-row-item">
+  <td><input type="checkbox" class="bulk-select-item" value="{{ cert.id }}" aria-label="Select {{ cert.full_domain }}"></td>
   <td>
     <span class="table-title">{{ cert.full_domain }}</span>
   </td>

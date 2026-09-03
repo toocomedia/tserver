@@ -4,16 +4,26 @@
 <div class="inner-tab-content" id="mdb-panel-databases">
   <div class="php-cards-grid">
     <div class="php-card">
-      <div class="php-card__title has-table" style="margin-bottom: 0;">
-        <span>User Databases</span>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="mdb-db-search" class="form-input pg-search-input" placeholder="Search databases..." oninput="onMdbDbSearch(this.value)">
-        </div>
-      </div>
+      {% set bulk_endpoint = '/plugins/mariadb_manager/api/bulk' %}
+      {% set bulk_table = 'mdb-db-table' %}
+      {% set bulk_item_name = 'Database' %}
+      {% set search_placeholder = 'Search databases...' %}
+      {% set bulk_actions = [
+        {'action': 'delete', 'label': _('delete_selected')}
+      ] %}
+      {% include "partials/action_toolbar.html" %}
 
       <table class="table" id="mdb-db-table" style="width: 100%; table-layout: fixed; margin-bottom: 0;">
+        <colgroup>
+          <col style="width: 40px;">
+          <col>
+          <col style="width: 180px;">
+          <col style="width: 160px;">
+          <col style="width: 140px;">
+        </colgroup>
         <thead>
           <tr>
+            <th style="padding: 8px 12px; width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="{{ _('select_all') }}"></th>
             <th style="padding: 8px 12px;">Database Name</th>
             <th style="padding: 8px 12px; width: 180px;">Access Scope</th>
             <th style="padding: 8px 12px; width: 160px;">Collation / Engine</th>
@@ -24,6 +34,7 @@
           {% if databases %}
             {% for database in databases %}
             <tr data-mdb-database="{{ database.name }}">
+              <td><input type="checkbox" class="bulk-select-item" value="{{ database.name }}" aria-label="Select {{ database.name }}"></td>
               <td class="table-title"><strong>{{ database.name }}</strong></td>
               <td><code>Local restricted user</code></td>
               <td><span class="text-muted">utf8mb4 / InnoDB</span></td>
@@ -40,7 +51,7 @@
             {% endfor %}
           {% else %}
             <tr id="mdb-db-empty-row">
-              <td colspan="4" class="text-muted" style="text-align: center; padding: var(--space-xl);">
+              <td colspan="5" class="text-muted" style="text-align: center; padding: var(--space-xl);">
                 No databases found. Create one using the "+ Create Database" button above.
               </td>
             </tr>

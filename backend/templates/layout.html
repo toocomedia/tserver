@@ -2,12 +2,14 @@
 <html lang="{{ get_lang() }}" dir="{{ get_dir() }}" data-sidebar-style="opacity">
 <head>
   <meta charset="UTF-8">
-  <!-- Zero-Latency Theme & Sidebar Layout Initializer: Runs before ANY stylesheet or DOM parsing -->
+  <!-- Zero-Latency Theme, Font & Sidebar Layout Initializer: Runs before ANY stylesheet or DOM parsing -->
   <script>
     (function() {
       try {
         var s = localStorage.getItem('sidebar_style');
         if (s) document.documentElement.setAttribute('data-sidebar-style', s);
+        var f = localStorage.getItem('panel_font');
+        if (f && f !== 'onest') document.documentElement.setAttribute('data-font', f);
         var t = localStorage.getItem('theme') || 'system';
         if (t === 'dark' || t === 'amoled' || t === 'charcoal') {
           document.documentElement.setAttribute('data-theme', t);

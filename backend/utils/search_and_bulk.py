@@ -3,7 +3,7 @@ search_and_bulk.py — Reusable Backend Utilities for Search & Bulk Actions
 Provides generic query filtering and bulk action handlers across SQLAlchemy models.
 """
 
-from typing import List, Any, Type, Dict, Optional
+from typing import List, Any, Type, Dict, Optional, Union
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import or_, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +14,8 @@ from sqlalchemy.orm import InstrumentedAttribute
 class BulkActionRequest(BaseModel):
     """Generic payload schema for bulk endpoint requests."""
     action: str = Field(..., description="Bulk action name (e.g. 'delete', 'enable', 'disable', 'restart')")
-    item_ids: List[int] = Field(default_factory=list, description="List of primary key IDs to operate on")
-    ids: Optional[List[int]] = Field(default=None, description="Alias for item_ids")
+    item_ids: List[Union[int, str]] = Field(default_factory=list, description="List of primary key IDs or names to operate on")
+    ids: Optional[List[Union[int, str]]] = Field(default=None, description="Alias for item_ids")
 
     @model_validator(mode="before")
     @classmethod
@@ -28,7 +28,7 @@ class BulkActionRequest(BaseModel):
         return data
 
     @property
-    def target_ids(self) -> List[int]:
+    def target_ids(self) -> List[Union[int, str]]:
         return self.item_ids or self.ids or []
 
 

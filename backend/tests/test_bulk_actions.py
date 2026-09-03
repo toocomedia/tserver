@@ -111,6 +111,72 @@ class TestBulkEndpoints(unittest.IsolatedAsyncioTestCase):
         mock_test.assert_called_once_with(db, 3)
         mock_task.assert_called_once()
 
+    @patch("services.php_site_service.delete_site", new_callable=AsyncMock)
+    @patch("services.php_site_service.get_site", new_callable=AsyncMock)
+    @patch("services.task_manager_service.task_manager_service.record_completed_task", new_callable=AsyncMock)
+    async def test_php_sites_bulk_delete(self, mock_task, mock_get_site, mock_del_site):
+        from routers.php_sites import php_sites_bulk_action
+        from models.domain import Domain
+        from models.php_website import PhpWebsite
+
+        db = AsyncMock()
+        fake_site = PhpWebsite(id=1, domain_id=10)
+        fake_domain = Domain(id=10, name="example.php")
+        mock_get_site.return_value = fake_site
+        db.get.return_value = fake_domain
+
+        payload = BulkActionRequest(action="delete", item_ids=[1])
+        res = await php_sites_bulk_action(payload, db=db)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["processed"], 1)
+        mock_del_site.assert_called_once()
+        mock_task.assert_called_once()
+
+    @patch("services.ssl_service.renew_cert", new_callable=AsyncMock)
+    @patch("services.task_manager_service.task_manager_service.record_completed_task", new_callable=AsyncMock)
+    async def test_ssl_bulk_renew(self, mock_task, mock_renew):
+        from routers.ssl import ssl_bulk_action
+
+        db = AsyncMock()
+        payload = BulkActionRequest(action="renew", item_ids=[11, 12])
+        res = await ssl_bulk_action(payload, db=db)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["processed"], 2)
+        self.assertEqual(mock_renew.call_count, 2)
+        mock_task.assert_called_once()
+
+    @patch("plugins.mariadb_manager.router._require_managed_mariadb")
+    @patch("plugins.mariadb_manager.service.mariadb_manager_service.drop_database")
+    @patch("plugins.mariadb_manager.router.task_manager_service.record_completed_task", new_callable=AsyncMock)
+    async def test_mariadb_bulk_delete(self, mock_task, mock_drop, mock_req):
+        from plugins.mariadb_manager.router import mariadb_bulk_action
+
+        db = AsyncMock()
+        db.scalar.return_value = None  # Not owned by a PHP site
+
+        payload = BulkActionRequest(action="delete", item_ids=["test_db_1"])
+        res = await mariadb_bulk_action(payload, db=db)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["processed"], 1)
+        mock_drop.assert_called_once_with("test_db_1")
+        mock_task.assert_called_once()
+
+    @patch("plugins.postgres_manager.queries.drop_database")
+    @patch("plugins.postgres_manager.router.task_manager_service.record_completed_task", new_callable=AsyncMock)
+    async def test_postgres_bulk_delete(self, mock_task, mock_drop):
+        from plugins.postgres_manager.router import postgres_bulk_action
+
+        payload = BulkActionRequest(action="delete", item_ids=["pg_db_1"])
+        res = await postgres_bulk_action(payload)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["processed"], 1)
+        mock_drop.assert_called_once_with("pg_db_1")
+        mock_task.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -53,11 +53,17 @@
         <tr class="dns-row-item">
           <td class="table-title">{{ z.domain.name }}</td>
           <td>
-            <span style="font-weight:700;">{{ z.record_count }}</span>
-            <span class="text-small text-muted"> {{ _('records_1') }}</span>
+            {% if z.external_provider %}
+              <span class="text-muted">—</span>
+            {% else %}
+              <span style="font-weight:700;">{{ z.record_count }}</span>
+              <span class="text-small text-muted"> {{ _('records_1') }}</span>
+            {% endif %}
           </td>
           <td>
-            {% if z.zone_exists %}
+            {% if z.external_provider %}
+              <span class="badge-minimal badge-minimal--neutral" title="{{ z.external_provider }}">{{ _('external_1') }}</span>
+            {% elif z.zone_exists %}
               <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
             {% else %}
               <span class="badge-minimal badge-minimal--danger">{{ _('missing') }}</span>
@@ -73,7 +79,7 @@
                 <span>Use Record in {{ z.parent_domain_match }}</span>
               </button>
               {% endif %}
-              {% if z.zone_exists %}
+              {% if z.zone_exists or z.external_provider %}
               <a href="/dns/{{ z.domain.name }}/records?add=1" class="btn btn--primary btn--sm" title="Add DNS Record" id="btn-add-{{ z.domain.name }}">
                 <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
                 <span>{{ _('add_record') }}</span>

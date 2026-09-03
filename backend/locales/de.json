@@ -843,5 +843,10 @@
   "free_ram_cache": "RAM-Cache leeren",
   "smart_flush_swap": "Smart-Swap-Bereinigung",
   "free_ram_cache_tooltip": "Gibt inaktive Kernel-Pagecaches sicher frei und leert sofort physischen Arbeitsspeicher.",
-  "smart_flush_swap_tooltip": "Bereinigt den RAM-Cache und leert alte Swap-Belegungen sicher, wenn genügend freier Speicher vorhanden ist."
+  "smart_flush_swap_tooltip": "Bereinigt den RAM-Cache und leert alte Swap-Belegungen sicher, wenn genügend freier Speicher vorhanden ist.",
+  "font_family": "Schriftart",
+  "current_font": "Aktuell (Onest)",
+  "current_font_desc": "Klares geometrisches Sans-Serif (Standard)",
+  "inter_font_desc": "Beliebte bildschirmoptimierte Sans-Serif",
+  "instrument_sans_desc": "Moderne ausdrucksstarke Groteskschrift"
 }

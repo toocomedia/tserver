@@ -1,0 +1,16 @@
+{
+  "id": "external_dns",
+  "name": "External DNS Manager",
+  "description": "Edit DNS records for panel domains hosted at external providers (Wix, Hetzner) from inside the DNS Manager, with per-domain encrypted credentials. Built on a drop-in provider registry.",
+  "version": "1.0.0",
+  "author": "SRV Panel Core",
+  "icon": "network",
+  "route_prefix": "/plugins/external_dns",
+  "sidebar": false,
+  "enabled": true,
+  "route_dependency_checks": false,
+  "usage": {},
+  "requires": {
+    "dependencies": []
+  }
+}

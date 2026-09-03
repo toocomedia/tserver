@@ -1,0 +1,47 @@
+{# ============================================================
+   Connect / manage a domain's external DNS provider.
+   Pure HTML shell: the provider <select> and credential fields are injected by
+   static/js/external_dns.js from /plugins/external_dns/api/providers, so adding
+   a new provider requires NO template change.
+   ============================================================ #}
+<div id="ext-dns-modal" class="modal-backdrop modal-backdrop--slide hidden" role="dialog" aria-modal="true" aria-labelledby="ext-dns-modal-title">
+  <div class="modal modal--slide" style="max-width: 460px;">
+    <div class="modal__header">
+      <div class="d-flex align-center gap-sm">
+        <h2 id="ext-dns-modal-title">{{ _('ext_dns_connect_title') }}</h2>
+        <span class="badge badge--neutral text-small" id="ext-dns-modal-domain"></span>
+      </div>
+      <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('ext-dns-modal')" aria-label="{{ _('close') }}">✕</button>
+    </div>
+
+    <div class="modal__body" style="display:flex; flex-direction:column; gap:var(--space-md); flex:1; overflow-y:auto;">
+      <!-- Provider selector (options injected by JS) -->
+      <div class="form-group">
+        <label class="form-label" for="ext-dns-provider">{{ _('ext_dns_provider') }}</label>
+        <div class="form-select-wrap">
+          <select id="ext-dns-provider" class="form-select"></select>
+        </div>
+        <span class="form-hint text-muted" id="ext-dns-provider-help"></span>
+      </div>
+
+      <!-- Credential fields (injected per provider) -->
+      <div id="ext-dns-cred-fields" style="display:flex; flex-direction:column; gap:var(--space-md);"></div>
+
+      <!-- Zone / domain locator -->
+      <div class="form-group">
+        <label class="form-label" for="ext-dns-zone-ref">{{ _('ext_dns_zone_ref') }}</label>
+        <input id="ext-dns-zone-ref" type="text" class="form-input" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <span class="form-hint text-muted">{{ _('ext_dns_zone_ref_hint') }}</span>
+      </div>
+
+      <!-- Test result banner -->
+      <div id="ext-dns-test-result" class="alert hidden" style="margin:0;"></div>
+    </div>
+
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('ext-dns-modal')">{{ _('cancel') }}</button>
+      <button type="button" class="btn btn--secondary" id="ext-dns-test-btn">{{ _('ext_dns_test') }}</button>
+      <button type="button" class="btn btn--primary" id="ext-dns-save-btn">{{ _('ext_dns_save') }}</button>
+    </div>
+  </div>
+</div>
