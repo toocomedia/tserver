@@ -77,15 +77,30 @@ class WixDnsProvider(DnsProvider):
         setup_label_key="ext_dns_setup_wix",
     )
 
+    def _clean_zone(self) -> str:
+        z = (self.zone_ref or "").strip().lower()
+        if z.startswith("https://"):
+            z = z[8:]
+        elif z.startswith("http://"):
+            z = z[7:]
+        return z.rstrip("/").strip()
+
     def _headers(self) -> dict[str, str]:
+        key = str(self.credentials.get("api_key", "")).strip()
+        if key.lower().startswith("bearer "):
+            key = key[7:].strip()
+        account_id = str(self.credentials.get("account_id", "")).strip().strip('"').strip("'")
         return {
-            "Authorization": str(self.credentials.get("api_key", "")).strip(),
-            "wix-account-id": str(self.credentials.get("account_id", "")).strip(),
+            "Authorization": key,
+            "wix-account-id": account_id,
             "Content-Type": "application/json",
         }
 
     def _zone_url(self) -> str:
-        return f"{BASE_URL}/{self.zone_ref.strip()}"
+        zone = self._clean_zone()
+        if not zone:
+            raise ExternalDnsError("Zone reference (domain name) is required.", status_code=400)
+        return f"{BASE_URL}/{zone}"
 
     def _max(self) -> int:
         return self.meta.capabilities.max_values_per_type
@@ -93,7 +108,7 @@ class WixDnsProvider(DnsProvider):
     def _fqdn(self, name: str) -> str:
         """'@'/'www' (or an FQDN) → Wix hostName (FQDN, lowercased)."""
         n = (name or "").strip().rstrip(".").lower()
-        domain = self.zone_ref.strip().lower()
+        domain = self._clean_zone()
         if n in ("", "@"):
             return domain
         if n == domain or n.endswith("." + domain):
@@ -103,7 +118,7 @@ class WixDnsProvider(DnsProvider):
     def _short(self, host: str) -> str:
         """Wix hostName (FQDN) → '@'/prefix relative to the zone, for display."""
         h = (host or "").strip().rstrip(".").lower()
-        domain = self.zone_ref.strip().lower()
+        domain = self._clean_zone()
         if not domain or h == domain:
             return "@" if h == domain else h
         if h.endswith("." + domain):
@@ -114,15 +129,22 @@ class WixDnsProvider(DnsProvider):
         async with self._client(self._headers()) as c:
             r = await c.get(self._zone_url())
         if r.status_code in (401, 403):
-            raise CredentialsError("Wix rejected the API key or account id.")
+            detail = ""
+            try:
+                err_data = r.json() or {}
+                detail = err_data.get("message") or err_data.get("description") or ""
+            except Exception:
+                detail = (r.text or "").strip()[:200]
+            msg = f"Wix rejected credentials ({r.status_code}): {detail}" if detail else "Wix rejected the API key or account id."
+            raise CredentialsError(msg)
         if r.status_code == 404:
             raise ExternalDnsError(
-                f"Wix has no DNS zone for '{self.zone_ref}'. The domain must be registered "
+                f"Wix has no DNS zone for '{self._clean_zone()}'. The domain must be registered "
                 "via Wix or connected by nameservers.",
                 status_code=404,
             )
         if r.status_code != 200:
-            raise ExternalDnsError(f"Wix zone lookup failed ({r.status_code}).")
+            raise ExternalDnsError(f"Wix zone lookup failed ({r.status_code}): {(r.text or '')[:200]}")
         data = r.json() or {}
         return data.get("dnsZone", data) or {}
 
@@ -137,7 +159,14 @@ class WixDnsProvider(DnsProvider):
         async with self._client(self._headers()) as c:
             r = await c.patch(self._zone_url(), json=body)
         if r.status_code in (401, 403):
-            raise CredentialsError("Wix rejected the API key or account id.")
+            detail = ""
+            try:
+                err_data = r.json() or {}
+                detail = err_data.get("message") or err_data.get("description") or ""
+            except Exception:
+                detail = (r.text or "").strip()[:200]
+            msg = f"Wix rejected credentials ({r.status_code}): {detail}" if detail else "Wix rejected the API key or account id."
+            raise CredentialsError(msg)
         if r.status_code not in (200, 204):
             raise ExternalDnsError(
                 f"Wix record update failed ({r.status_code}): {(r.text or '')[:300]}"

@@ -93,9 +93,9 @@
     if (provider && provider.setup_url) {
       a.href = provider.setup_url;
       a.textContent = `${provider.setup_label_key ? t(provider.setup_label_key) : t("ext_dns_setup_link")} ↗`;
-      a.hidden = false;
+      a.style.display = "inline-block";
     } else {
-      a.hidden = true;
+      a.style.display = "none";
       a.removeAttribute("href");
       a.textContent = "";
     }
