@@ -15,6 +15,7 @@
     window.confirmAction(
       `Delete domain "${name}"? This will remove the DNS zone, Nginx config, webroot, and linked SSL certificate.`,
       async () => {
+        if (typeof window.openTaskDrawer === 'function') window.openTaskDrawer('auto');
         try {
           const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
           const response = await fetch(`/domains/${id}/delete`, {

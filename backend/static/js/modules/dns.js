@@ -369,6 +369,7 @@ function bindBulkDeleteRecords() {
         bulkBtn.disabled = true;
         const prev = bulkBtn.textContent;
         bulkBtn.textContent = "Deleting...";
+        if (typeof window.openTaskDrawer === "function") window.openTaskDrawer('auto');
         try {
           const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
                        document.querySelector('[name="csrf_token"]')?.value || "";

@@ -105,6 +105,10 @@
           const prev = bulkBtn.textContent;
           bulkBtn.textContent = '...';
 
+          if (typeof window.openTaskDrawer === 'function') {
+            window.openTaskDrawer('auto');
+          }
+
           try {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
                          document.querySelector('[name="csrf_token"]')?.value || '';
