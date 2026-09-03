@@ -142,3 +142,16 @@ async def delete_record(db: AsyncSession, domain: str, record_id: str, name: str
         raise
     except Exception as exc:
         raise _http(exc) from exc
+
+
+async def push_records(db: AsyncSession, domain: str, rows: list[dict]) -> dict:
+    """Import panel (PowerDNS) records into the domain's external provider."""
+    _, operations = _load()
+    if operations is None:
+        raise HTTPException(status_code=400, detail="External DNS plugin is not active.")
+    try:
+        return await operations.push_records(db, domain, rows)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http(exc) from exc

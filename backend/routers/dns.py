@@ -71,6 +71,7 @@ async def dns_index(request: Request, db: AsyncSession = Depends(get_db)):
     )).scalars().all()
 
     external_map = await external_dns_bridge.bindings_map(db)
+    external_active = external_dns_bridge.plugin_active()
 
     zones = []
     for domain in domains:
@@ -93,6 +94,7 @@ async def dns_index(request: Request, db: AsyncSession = Depends(get_db)):
         "request": request,
         "active_page": "dns",
         "zones": zones,
+        "external_active": external_active,
     })
 
 
@@ -494,3 +496,56 @@ async def dns_apply_template(
             f"/dns/{domain_name}/records?error={error}",
             status_code=303
         )
+
+
+# ---------------------------------------------------------------
+# SYNC PANEL RECORDS → EXTERNAL PROVIDER
+# ---------------------------------------------------------------
+@router.post("/{domain_name}/records/sync")
+async def dns_sync_external(
+    request: Request,
+    domain_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Push this domain's PowerDNS records into its external provider (one-time import)."""
+    domain = (await db.execute(
+        select(Domain).where(Domain.name == domain_name)
+    )).scalar_one_or_none()
+    if not domain:
+        return JSONResponse({"error": "Domain not found"}, status_code=404)
+    if not await external_dns_bridge.is_bound(db, domain_name):
+        return _err_response(request, domain_name, "Domain is not connected to an external provider.")
+
+    # Read the panel's PowerDNS records (the zone still exists after switching).
+    try:
+        rrsets = await dns_service.list_records(domain_name)
+    except Exception:
+        rrsets = []
+    rows = []
+    for rrset in rrsets:
+        rtype = (rrset.get("type") or "").upper()
+        if rtype in ("SOA", "NS"):
+            continue
+        short = powerdns.normalize_record_name(rrset.get("name", ""), domain_name)
+        for rec in rrset.get("records", []):
+            content = rec.get("content")
+            if not content:
+                continue
+            rows.append({"name": short, "type": rtype, "content": content, "ttl": rrset.get("ttl", 3600)})
+
+    try:
+        result = await external_dns_bridge.push_records(db, domain_name, rows)
+        msg = f"Synced {result.get('added', 0)} record(s) to the external provider."
+        if result.get("failed"):
+            msg += f" {result['failed']} failed."
+        await task_manager_service.record_completed_task(
+            category="dns", action="sync", target_id=domain_name,
+            label=f"Sync DNS to external: {domain_name}", success=True, message=msg,
+        )
+        if _wants_json(request):
+            return {"status": "ok", "message": msg, **result}
+        return RedirectResponse(f"/dns/{domain_name}/records?success={quote(msg)}", status_code=303)
+    except HTTPException as exc:
+        return _err_response(request, domain_name, str(exc.detail))
+    except Exception as exc:
+        return _err_response(request, domain_name, str(exc))

@@ -32,6 +32,16 @@
   "ext_dns_edit_record_title": "Edit DNS Record",
   "ext_dns_record_updated": "Record updated.",
   "ext_dns_save_record": "Save Record",
+  "ext_dns_header_link": "External DNS",
+  "ext_dns_use_external": "Use External DNS",
+  "ext_dns_use_panel": "Use Panel DNS",
+  "ext_dns_sync": "Sync Records",
+  "ext_dns_sync_title": "Sync Records to Provider",
+  "ext_dns_sync_confirm": "Push this domain's PowerDNS records into the external provider? A/AAAA/CNAME/MX/TXT records are added; SOA and NS are skipped.",
+  "ext_dns_setup_link": "Get API credentials",
+
+  "ext_dns_setup_hetzner": "Open the Hetzner DNS console to create an API token",
+  "ext_dns_setup_wix": "Open Wix Developers to create an API key",
 
   "ext_dns_provider_hetzner": "Hetzner DNS",
   "ext_dns_provider_hetzner_help": "Manage records in a Hetzner DNS zone. Create an API token in the Hetzner Console.",

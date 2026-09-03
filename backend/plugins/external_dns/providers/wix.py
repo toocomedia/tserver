@@ -73,6 +73,8 @@ class WixDnsProvider(DnsProvider):
         ],
         supported_types=SUPPORTED_TYPES,
         capabilities=Capabilities(supports_edit=True, supports_ttl=True, max_values_per_type=50),
+        setup_url="https://dev.wix.com/",
+        setup_label_key="ext_dns_setup_wix",
     )
 
     def _headers(self) -> dict[str, str]:

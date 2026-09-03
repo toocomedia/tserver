@@ -91,6 +91,8 @@ class ProviderMeta:
     credential_fields: list[CredentialField]
     supported_types: list[str]
     capabilities: Capabilities = field(default_factory=Capabilities)
+    setup_url: str | None = None            # external "get API credentials" link
+    setup_label_key: str | None = None      # label for that link (i18n key)
 
     def to_public_dict(self) -> dict[str, Any]:
         """JSON-safe metadata for /api/providers (no secrets — keys/ids only)."""
@@ -99,6 +101,8 @@ class ProviderMeta:
             "label_key": self.label_key,
             "help_key": self.help_key,
             "icon": self.icon,
+            "setup_url": self.setup_url,
+            "setup_label_key": self.setup_label_key,
             "credential_fields": [
                 {
                     "id": f.id,

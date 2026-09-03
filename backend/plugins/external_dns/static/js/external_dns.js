@@ -27,6 +27,7 @@
       body: body ? JSON.stringify(body) : undefined,
     });
     const json = await res.json().catch(() => ({}));
+    if (!res.ok) console.warn("[external_dns]", path, res.status, json);
     return { ok: res.ok, data: json };
   }
 
@@ -86,10 +87,25 @@
     });
   }
 
+  function renderSetupLink(provider) {
+    const a = document.getElementById("ext-dns-setup-link");
+    if (!a) return;
+    if (provider && provider.setup_url) {
+      a.href = provider.setup_url;
+      a.textContent = `${provider.setup_label_key ? t(provider.setup_label_key) : t("ext_dns_setup_link")} ↗`;
+      a.hidden = false;
+    } else {
+      a.hidden = true;
+      a.removeAttribute("href");
+      a.textContent = "";
+    }
+  }
+
   function onProviderChange() {
     const p = byId(document.getElementById("ext-dns-provider")?.value);
     const help = document.getElementById("ext-dns-provider-help");
     if (help) help.textContent = p && p.help_key ? t(p.help_key) : "";
+    renderSetupLink(p);
     renderCredFields(p, null);
   }
 
@@ -106,6 +122,7 @@
     const help = document.getElementById("ext-dns-provider-help");
     const cur = byId(sel.value);
     if (help) help.textContent = cur && cur.help_key ? t(cur.help_key) : "";
+    renderSetupLink(cur);
     renderCredFields(cur, null);
   }
 
@@ -193,13 +210,37 @@
           try {
             const r = await apiCall("/unbind", { domain });
             if (r.data.ok !== false) {
-              const row = btn.closest("tr");
-              if (row) { row.style.transition = "opacity .22s"; row.style.opacity = "0"; setTimeout(() => row.remove(), 220); }
               if (window.toast) toast(t("ext_dns_disconnected"), "success");
               if (window.refreshTasks) refreshTasks();
+              // Reverting to PowerDNS changes this row's badge/actions (and the
+              // landing list), so refresh once — a user-initiated, one-time reload.
+              setTimeout(() => window.location.reload(), 500);
             } else if (window.toast) toast(r.data.error || "Error", "danger");
           } catch (e) { if (window.toast) toast(e.message || "Error", "danger"); }
         }, { danger: true, title: t("ext_dns_disconnect_title"), okLabel: t("ext_dns_disconnect"), itemName: domain });
+      });
+    });
+  }
+
+  function bindSyncButtons() {
+    document.querySelectorAll(".ext-dns-sync").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const domain = btn.getAttribute("data-domain");
+        if (!domain || !window.confirmAction) return;
+        confirmAction(t("ext_dns_sync_confirm"), async () => {
+          btn.disabled = true;
+          try {
+            const res = await fetch(`/dns/${encodeURIComponent(domain)}/records/sync`, { method: "POST", headers: headers() });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.status === "ok") {
+              if (window.toast) toast(data.message || t("ext_dns_sync"), "success");
+              if (window.refreshTasks) refreshTasks();
+            } else if (window.toast) {
+              toast(data.error || data.detail || "Error", "danger");
+            }
+          } catch (e) { if (window.toast) toast(e.message || "Error", "danger"); }
+          finally { btn.disabled = false; }
+        }, { title: t("ext_dns_sync_title"), okLabel: t("ext_dns_sync"), itemName: domain });
       });
     });
   }
@@ -209,5 +250,6 @@
     document.getElementById("ext-dns-test-btn")?.addEventListener("click", doTest);
     document.getElementById("ext-dns-save-btn")?.addEventListener("click", doSave);
     bindUnbindButtons();
+    bindSyncButtons();
   });
 })();

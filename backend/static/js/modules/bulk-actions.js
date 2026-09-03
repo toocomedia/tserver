@@ -36,10 +36,15 @@
       const hasChecked = checked.length > 0;
 
       if (bulkSelect) bulkSelect.disabled = !hasChecked;
-      if (bulkBtn) bulkBtn.disabled = !hasChecked || !bulkSelect || !bulkSelect.value;
+      if (bulkBtn) {
+        bulkBtn.disabled = !hasChecked || !bulkSelect || !bulkSelect.value;
+        const baseText = bulkBtn.getAttribute('data-base-text') || bulkBtn.textContent.replace(/\s*\(\d+\)$/, '').trim();
+        bulkBtn.setAttribute('data-base-text', baseText);
+        bulkBtn.textContent = hasChecked ? `${baseText} (${checked.length})` : baseText;
+      }
       if (counterEl) {
-        counterEl.textContent = hasChecked ? `(${checked.length})` : '';
-        counterEl.style.display = hasChecked ? '' : 'none';
+        counterEl.textContent = '';
+        counterEl.style.display = 'none';
       }
       if (selectAll) {
         selectAll.checked = visible.length > 0 && checked.length === visible.length;
@@ -140,8 +145,8 @@
                   }, 250);
                 });
                 bulkBtn.disabled = false;
-                bulkBtn.textContent = prev;
                 if (bulkSelect) bulkSelect.value = '';
+                updateState();
               } else {
                 setTimeout(() => window.location.reload(), 400);
               }
@@ -150,13 +155,13 @@
               if (typeof window.toast === 'function') window.toast(msg, 'danger');
               else alert(msg);
               bulkBtn.disabled = false;
-              bulkBtn.textContent = prev;
+              updateState();
             }
           } catch (err) {
             if (typeof window.toast === 'function') window.toast(err.message || 'Action failed', 'danger');
             else alert(err.message);
             bulkBtn.disabled = false;
-            bulkBtn.textContent = prev;
+            updateState();
           }
         };
 

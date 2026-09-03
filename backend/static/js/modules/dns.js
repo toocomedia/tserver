@@ -336,7 +336,10 @@ function bindBulkDeleteRecords() {
     if (bulkBtn) {
       bulkBtn.style.display = checked.length ? "inline-flex" : "none";
       bulkBtn.disabled = !checked.length;
-      if (countSpan) countSpan.textContent = checked.length ? `(${checked.length})` : "";
+      const baseText = bulkBtn.getAttribute("data-base-text") || bulkBtn.textContent.replace(/\s*\(\d+\)$/, "").trim();
+      bulkBtn.setAttribute("data-base-text", baseText);
+      bulkBtn.textContent = checked.length ? `${baseText} (${checked.length})` : baseText;
+      if (countSpan) countSpan.style.display = "none";
     }
     if (selectAll) {
       const all = itemBoxes();

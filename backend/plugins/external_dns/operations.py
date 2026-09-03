@@ -65,3 +65,30 @@ async def delete_record(db: AsyncSession, domain_name: str, record_id: str, name
     if (rtype or "").strip().upper() == "SOA":
         raise ExternalDnsError("SOA records cannot be deleted.", status_code=400)
     await adapter.delete_record(record_id, name, rtype, content)
+
+
+async def push_records(db: AsyncSession, domain_name: str, rows: list[dict]) -> dict:
+    """Create panel-provided records in the provider (one-time import on switch).
+
+    SOA/NS are skipped (the provider owns zone infrastructure); unsupported types
+    are reported, not fatal. Returns a summary so the caller can surface it.
+    """
+    binding, adapter = await _bound(db, domain_name)
+    allowed = external_dns_service.supported_types(binding.provider)
+    added = 0
+    errors: list[str] = []
+    for row in rows:
+        rtype = (row.get("type") or "").strip().upper()
+        name = row.get("name") or "@"
+        content = row.get("content") or ""
+        if rtype in ("SOA", "NS") or not content:
+            continue
+        if allowed and rtype not in allowed:
+            errors.append(f"{name} ({rtype}): unsupported by provider")
+            continue
+        try:
+            await adapter.add_record(name, rtype, content, int(row.get("ttl") or 3600))
+            added += 1
+        except Exception as exc:
+            errors.append(f"{name} ({rtype}): {getattr(exc, 'message', str(exc))}")
+    return {"added": added, "failed": len(errors), "errors": errors[:10]}

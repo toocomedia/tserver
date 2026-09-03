@@ -6,6 +6,12 @@
 {% block page_title %}{{ _('dns_manager') }}{% endblock %}
 
 {% block topbar_actions %}
+  {% if external_active %}
+  <a href="/plugins/external_dns/" class="btn btn--secondary" id="btn-ext-dns-manager">
+    <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/></svg>
+    <span>{{ _('ext_dns_header_link') }}</span>
+  </a>
+  {% endif %}
   <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">{{ _('add_domain') }}</a>
 {% endblock %}
 
@@ -73,6 +79,27 @@
             {% import "partials/list_actions_toggle.html" as list_actions %}
             {{ list_actions.button() }}
             {% call list_actions.tray() %}
+              {% if external_active %}
+                {% if z.external_provider %}
+                <button type="button" class="btn btn--secondary btn--sm" onclick="openExternalDnsModal('{{ z.domain.name }}')" title="{{ _('ext_dns_manage_connection') }}">
+                  <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  <span>{{ _('ext_dns_manage_connection') }}</span>
+                </button>
+                <button type="button" class="btn btn--secondary btn--sm ext-dns-sync" data-domain="{{ z.domain.name }}" title="{{ _('ext_dns_sync') }}">
+                  <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>{{ _('ext_dns_sync') }}</span>
+                </button>
+                <button type="button" class="btn btn--danger btn--sm ext-dns-unbind" data-domain="{{ z.domain.name }}" title="{{ _('ext_dns_use_panel') }}">
+                  <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                  <span>{{ _('ext_dns_use_panel') }}</span>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn--secondary btn--sm" onclick="openExternalDnsModal('{{ z.domain.name }}')" title="{{ _('ext_dns_use_external') }}">
+                  <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/></svg>
+                  <span>{{ _('ext_dns_use_external') }}</span>
+                </button>
+                {% endif %}
+              {% endif %}
               {% if z.parent_domain_match and z.zone_exists %}
               <button type="button" class="btn btn--secondary btn--sm" onclick="convertSubdomainToRecord('{{ z.domain.name }}', '{{ z.parent_domain_match }}')" title="Convert to record in {{ z.parent_domain_match }}">
                 <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
@@ -111,6 +138,9 @@
 ) }}
 {% endif %}
 </div><!-- /.dns-page -->
+{% if external_active %}
+{% include "partials/_external_dns_modal.html" %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -145,4 +175,7 @@ function filterDnsTable() {
   });
 }
 </script>
+{% if external_active %}
+<script src="/plugins/external_dns/static/js/external_dns.js?v={{ APP_VERSION }}"></script>
+{% endif %}
 {% endblock %}

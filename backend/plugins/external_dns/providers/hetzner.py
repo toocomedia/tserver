@@ -44,6 +44,8 @@ class HetznerDnsProvider(DnsProvider):
         ],
         supported_types=SUPPORTED_TYPES,
         capabilities=Capabilities(supports_edit=True, supports_ttl=True, max_values_per_type=0),
+        setup_url="https://dns.hetzner.com/",
+        setup_label_key="ext_dns_setup_hetzner",
     )
 
     def _headers(self) -> dict[str, str]:

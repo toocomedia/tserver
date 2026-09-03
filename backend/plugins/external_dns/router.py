@@ -63,6 +63,7 @@ async def api_test(body: TestRequest):
             body.provider, body.credentials, body.zone_ref
         ))
     except ExternalDnsError as exc:
+        logger.warning("External DNS test failed (%s): %s", exc.status_code, exc.message)
         return JSONResponse({"ok": False, "error": exc.message}, status_code=exc.status_code)
     except Exception as exc:
         logger.warning("External DNS test failed: %s", exc)
@@ -79,6 +80,7 @@ async def api_bind(body: BindRequest, db: AsyncSession = Depends(get_db)):
         await _task("external_bind", body.domain, label, True, f"{body.domain} now uses {body.provider} DNS.")
         return JSONResponse({"ok": True, "binding": binding})
     except ExternalDnsError as exc:
+        logger.warning("External DNS bind failed (%s): %s", exc.status_code, exc.message)
         await _task("external_bind", body.domain, label, False, exc.message)
         return JSONResponse({"ok": False, "error": exc.message}, status_code=exc.status_code)
     except Exception as exc:
