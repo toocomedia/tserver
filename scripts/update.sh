@@ -34,6 +34,7 @@ write_release_info() {
   if command -v git >/dev/null 2>&1 && git -C "$SOURCE_DIR" rev-parse HEAD >/dev/null 2>&1; then
     commit="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
   fi
+  printf '%s\n' "$commit" > "$PANEL_DIR/app/COMMIT_HASH" 2>/dev/null || true
   umask 022
   printf 'commit=%s\nref=%s\nupdated_at=%s\n' "$commit" "$ref" "$(date -u +%FT%TZ)" > "$PANEL_DIR/RELEASE_INFO"
   chown root:"$PANEL_USER" "$PANEL_DIR/RELEASE_INFO"
@@ -182,15 +183,12 @@ if [[ "$BACKEND_SRC" != "$PANEL_DIR/app" ]]; then
     --exclude '.env' \
     --exclude 'accounts.json' \
     --exclude 'maddy_accounts.json' \
+    --exclude 'COMMIT_HASH' \
     "$BACKEND_SRC/" "$PANEL_DIR/app/"
 else
   info "    Backend is already the installed app directory."
 fi
 
-# Record git commit hash if available
-if command -v git &>/dev/null && git -C "$SOURCE_DIR" rev-parse HEAD &>/dev/null; then
-  git -C "$SOURCE_DIR" rev-parse HEAD > "$PANEL_DIR/app/COMMIT_HASH" 2>/dev/null || true
-fi
 write_release_info
 
 if [[ -d "$SCRIPTS_SRC" && "$SCRIPTS_SRC" != "$PANEL_DIR/scripts" ]]; then

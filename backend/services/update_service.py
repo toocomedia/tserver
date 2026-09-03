@@ -28,22 +28,22 @@ _update_lock = asyncio.Lock()
 _is_updating: bool = False
 
 
+import re
+
+
 async def get_local_commit() -> Dict[str, str]:
     """Retrieve the current running panel git commit hash."""
-    # 1. Check COMMIT_HASH file written by update.sh
-    commit_file = Path(__file__).parent.parent / "COMMIT_HASH"
-    if not commit_file.exists():
-        commit_file = Path("/opt/srv-panel/app/COMMIT_HASH")
-        
-    if commit_file.exists():
-        try:
-            sha = commit_file.read_text().strip()
-            if sha and len(sha) >= 7:
+    for path in (
+        Path("/opt/srv-panel/app/COMMIT_HASH"),
+        Path("/opt/srv-panel/RELEASE_INFO"),
+        Path(__file__).parent.parent / "COMMIT_HASH",
+    ):
+        if path.exists():
+            m = re.search(r"\b([0-9a-f]{7,40})\b", path.read_text(errors="ignore"))
+            if m:
+                sha = m.group(1)
                 return {"sha": sha, "short_sha": sha[:7]}
-        except Exception:
-            pass
 
-    # 2. Try git rev-parse HEAD directly if inside a git clone
     try:
         res = await run(["git", "rev-parse", "HEAD"])
         if res.success and res.stdout.strip():
@@ -146,7 +146,7 @@ async def check_updates(force: bool = False) -> Dict[str, Any]:
     if local_info["sha"] != "unknown" and remote_info["sha"] != "unknown":
         has_update = (local_info["sha"] != remote_info["sha"])
     elif local_info["sha"] == "unknown" and remote_info["sha"] != "unknown":
-        has_update = False
+        has_update = True
 
     result = {
         "has_update": has_update,

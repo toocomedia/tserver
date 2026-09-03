@@ -63,6 +63,11 @@ if ! curl -fsSL "$TAR_URL" | tar -xz -C "$CLONE_DIR" --strip-components=1 2>/dev
 fi
 
 SOURCE_COMMIT="${REPO_REF}"
+if command -v git &>/dev/null; then
+  SHA="$(git ls-remote "$REPO_URL" "refs/heads/${REPO_REF}" "${REPO_REF}" 2>/dev/null | awk '{print $1}' | head -n1)"
+  [[ -n "$SHA" ]] && SOURCE_COMMIT="$SHA"
+fi
+
 echo -e "${GRN}==>${NC} Downloaded source for: ${SOURCE_COMMIT}"
 
 export SOURCE_DIR="$CLONE_DIR"
