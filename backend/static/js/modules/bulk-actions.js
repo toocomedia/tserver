@@ -118,7 +118,29 @@
             const data = await res.json().catch(() => ({}));
             if (res.ok && data.success !== false) {
               if (typeof window.toast === 'function') window.toast(data.message || `Done: ${action} on ${label}`, 'success');
-              window.location.reload();
+              if (typeof window.refreshTasks === 'function') window.refreshTasks();
+
+              if (['delete', 'uninstall'].includes(action.toLowerCase())) {
+                const toRemove = checked.map(cb => cb.closest('tr')).filter(Boolean);
+                toRemove.forEach(row => {
+                  row.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                  row.style.opacity = '0';
+                  row.style.transform = 'translateX(-8px)';
+                  setTimeout(() => {
+                    row.remove();
+                    updateState();
+                    const remaining = tableEl.querySelectorAll('tbody tr');
+                    if (remaining.length === 0) {
+                      window.location.reload();
+                    }
+                  }, 250);
+                });
+                bulkBtn.disabled = false;
+                bulkBtn.textContent = prev;
+                if (bulkSelect) bulkSelect.value = '';
+              } else {
+                setTimeout(() => window.location.reload(), 400);
+              }
             } else {
               const msg = data.detail || data.message || `Failed to ${action}.`;
               if (typeof window.toast === 'function') window.toast(msg, 'danger');

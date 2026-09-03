@@ -380,7 +380,21 @@ function bindBulkDeleteRecords() {
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.success !== false) {
             if (typeof window.toast === "function") window.toast(data.message || "Records deleted", "success");
-            window.location.reload();
+            if (typeof window.refreshTasks === "function") window.refreshTasks();
+            checked.forEach(c => {
+              const row = c.closest("tr");
+              if (row) {
+                row.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+                row.style.opacity = "0";
+                row.style.transform = "translateX(-8px)";
+                setTimeout(() => {
+                  row.remove();
+                  update();
+                }, 250);
+              }
+            });
+            bulkBtn.disabled = false;
+            bulkBtn.textContent = prev;
           } else {
             alert(data.message || data.detail || "Failed to delete records");
             bulkBtn.disabled = false;

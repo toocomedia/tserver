@@ -26,7 +26,11 @@ from plugins.ai_helper.schemas import (
 )
 from plugins.ai_helper.services.chat import _ACTIVITY_PREFIX
 from plugins.ai_helper.services.secrets_consent import grant_consent, revoke_consent
+from services.task_manager_service import task_manager_service
 from templating import templates
+from utils.search_and_bulk import BulkActionRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/plugins/ai_helper", tags=["ai-helper"])
 
@@ -173,6 +177,54 @@ async def ai_helper_edit_action(
     if wants_json(request):
         return JSONResponse({"status": "ok", "message": "Provider updated successfully."})
     return RedirectResponse(url="/plugins/ai_helper/", status_code=303)
+
+
+@router.post("/api/bulk")
+async def ai_helper_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Bulk delete or test AI providers."""
+    if payload.action not in ["delete", "test"]:
+        raise HTTPException(400, f"Invalid bulk action '{payload.action}'.")
+    target_ids = payload.target_ids
+    if not target_ids:
+        return {"success": False, "processed": 0, "failed": 0, "message": "No provider IDs provided."}
+
+    processed = 0
+    errors = []
+
+    for pid in target_ids:
+        try:
+            if payload.action == "delete":
+                deleted = await service.delete_provider(db, pid)
+                if deleted:
+                    processed += 1
+                else:
+                    errors.append(f"Provider #{pid}: Not found")
+            elif payload.action == "test":
+                res = await service.test_provider(db, pid)
+                if res.get("success"):
+                    processed += 1
+                else:
+                    errors.append(f"Provider #{pid}: {res.get('error', 'Test failed')}")
+        except Exception as exc:
+            logger.exception("AI helper bulk %s failed for provider %s", payload.action, pid)
+            errors.append(f"Provider #{pid}: {str(exc)}")
+
+    await task_manager_service.record_completed_task(
+        category="ai_helper",
+        action=f"bulk_{payload.action}",
+        target_id="bulk",
+        label=f"Bulk {payload.action.title()} Providers ({processed})",
+        success=len(errors) == 0 or processed > 0,
+        message=f"Bulk executed {payload.action} on {processed} provider(s)."
+    )
+
+    return {
+        "success": len(errors) == 0 or processed > 0,
+        "processed": processed,
+        "failed": len(errors),
+        "message": f"Successfully executed {payload.action} on {processed} provider(s)." + (f" ({len(errors)} failed)" if errors else ""),
+        "errors": errors
+    }
 
 
 @router.post("/{provider_id}/set-default")

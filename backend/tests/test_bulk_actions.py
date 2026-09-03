@@ -83,6 +83,34 @@ class TestBulkEndpoints(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res["processed"], 1)
         mock_lifecycle.assert_called_once()
 
+    @patch("plugins.ai_helper.service.delete_provider", new_callable=AsyncMock, return_value=True)
+    @patch("plugins.ai_helper.router.task_manager_service.record_completed_task", new_callable=AsyncMock)
+    async def test_ai_helper_bulk_delete(self, mock_task, mock_delete):
+        from plugins.ai_helper.router import ai_helper_bulk_action
+
+        db = AsyncMock()
+        payload = BulkActionRequest(action="delete", item_ids=[1, 2])
+        res = await ai_helper_bulk_action(payload, db=db)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["processed"], 2)
+        self.assertEqual(mock_delete.call_count, 2)
+        mock_task.assert_called_once()
+
+    @patch("plugins.ai_helper.service.test_provider", new_callable=AsyncMock, return_value={"success": True, "latency_ms": 120})
+    @patch("plugins.ai_helper.router.task_manager_service.record_completed_task", new_callable=AsyncMock)
+    async def test_ai_helper_bulk_test(self, mock_task, mock_test):
+        from plugins.ai_helper.router import ai_helper_bulk_action
+
+        db = AsyncMock()
+        payload = BulkActionRequest(action="test", item_ids=[3])
+        res = await ai_helper_bulk_action(payload, db=db)
+
+        self.assertTrue(res["success"])
+        self.assertEqual(res["processed"], 1)
+        mock_test.assert_called_once_with(db, 3)
+        mock_task.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -111,6 +111,15 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
                 errors.append(f"{app.container_name}: {str(e)}")
     
     await db.commit()
+    from services.task_manager_service import task_manager_service
+    await task_manager_service.record_completed_task(
+        category="container_app",
+        action=f"bulk_{req.action}",
+        target_id="bulk",
+        label=f"Bulk {req.action.title()} Container Apps ({processed})",
+        success=len(errors) == 0 or processed > 0,
+        message=f"Bulk executed {req.action} on {processed} container app(s)."
+    )
     return {
         "success": len(errors) == 0 or processed > 0,
         "processed": processed,

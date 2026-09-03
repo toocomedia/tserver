@@ -30,36 +30,6 @@
 {% block scripts %}
 <script>
   window.INITIAL_RESOURCES = {{ (resources or {}) | tojson | safe }};
-
-  function filterProvidersTable() {
-    var searchInput = document.getElementById("provider-search-input");
-    var typeFilter = document.getElementById("provider-type-filter");
-    if (!searchInput) return;
-
-    var query = searchInput.value.toLowerCase().trim();
-    var filter = typeFilter ? typeFilter.value : "all";
-    var rows = document.querySelectorAll(".provider-row-item");
-
-    rows.forEach(function (row) {
-      var text = row.textContent.toLowerCase();
-      var matchesSearch = !query || text.indexOf(query) !== -1;
-
-      var matchesFilter = true;
-      if (filter === "openai") {
-        matchesFilter = row.getAttribute("data-type") === "openai_compatible";
-      } else if (filter === "anthropic") {
-        matchesFilter = row.getAttribute("data-type") === "anthropic";
-      } else if (filter === "default") {
-        matchesFilter = row.getAttribute("data-default") === "1";
-      }
-
-      if (matchesSearch && matchesFilter) {
-        row.style.display = "";
-      } else {
-        row.style.display = "none";
-      }
-    });
-  }
 </script>
 <script type="module" src="/plugins/ai_helper/static/js/ai-helper-admin.js?v={{ APP_VERSION }}"></script>
 <script>
